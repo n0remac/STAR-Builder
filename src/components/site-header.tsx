@@ -2,7 +2,8 @@ import Link from "next/link";
 
 const links = [
   { href: "/resume", label: "Resume" },
-  { href: "/jobs", label: "Jobs" }
+  { href: "/jobs", label: "Jobs" },
+  { href: "/narratives", label: "Narratives" }
 ];
 
 export function SiteHeader() {

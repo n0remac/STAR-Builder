@@ -124,6 +124,72 @@ export const StarScoreOutputSchema = z.object({
   rationale: z.string().min(1)
 });
 
+export const NarrativeScopeSchema = z.enum(["career", "job"]);
+
+export const NarrativeThemeSchema = z.enum([
+  "leadership",
+  "ownership",
+  "ambiguity",
+  "technical_depth",
+  "collaboration",
+  "impact"
+]);
+
+export const NarrativeStorySchema = StarDraftSchema.extend({
+  id: z.string().min(1),
+  score: z.number().int().min(1).max(10).nullable().default(null)
+});
+
+export const NarrativeJobStoriesSchema = z.object({
+  job: JobContextSchema,
+  stories: z.array(NarrativeStorySchema).min(1)
+});
+
+export const NarrativeInputSchema = z.object({
+  scope: NarrativeScopeSchema,
+  theme: NarrativeThemeSchema,
+  job: JobContextSchema.optional(),
+  jobs: z.array(NarrativeJobStoriesSchema).min(1)
+});
+
+export const NarrativeOutputSchema = z.object({
+  title: z.string().min(1),
+  positioning: z.string().min(1),
+  fullNarrative: z.string().min(1),
+  shortVersion: z.string().min(1),
+  interviewGuidance: z.string().min(1),
+  citedSourceIds: z.array(z.string().min(1)).min(1)
+});
+
+export const NarrativeDraftSchema = z.object({
+  title: z.string().min(1),
+  positioning: z.string().default(""),
+  fullNarrative: z.string().min(1),
+  shortVersion: z.string().default(""),
+  interviewGuidance: z.string().default("")
+});
+
+export const NarrativeScoreInputSchema = z.object({
+  scope: NarrativeScopeSchema,
+  theme: NarrativeThemeSchema,
+  draft: NarrativeDraftSchema
+});
+
+export const NarrativeScoreOutputSchema = z.object({
+  score: z.number().int().min(1).max(10),
+  rationale: z.string().min(1)
+});
+
+export const NarrativeFeedbackInputSchema = z.object({
+  scope: NarrativeScopeSchema,
+  theme: NarrativeThemeSchema,
+  draft: NarrativeDraftSchema
+});
+
+export const NarrativeFeedbackOutputSchema = z.object({
+  feedback: z.string().min(1)
+});
+
 export type ResumeExtractionInput = z.infer<typeof ResumeExtractionInputSchema>;
 export type ResumeExtractionOutput = z.infer<
   typeof ResumeExtractionOutputSchema
@@ -143,3 +209,18 @@ export type StarFeedbackInput = z.infer<typeof StarFeedbackInputSchema>;
 export type StarFeedbackOutput = z.infer<typeof StarFeedbackOutputSchema>;
 export type StarScoreInput = z.infer<typeof StarScoreInputSchema>;
 export type StarScoreOutput = z.infer<typeof StarScoreOutputSchema>;
+export type NarrativeScope = z.infer<typeof NarrativeScopeSchema>;
+export type NarrativeTheme = z.infer<typeof NarrativeThemeSchema>;
+export type NarrativeStory = z.infer<typeof NarrativeStorySchema>;
+export type NarrativeJobStories = z.infer<typeof NarrativeJobStoriesSchema>;
+export type NarrativeInput = z.infer<typeof NarrativeInputSchema>;
+export type NarrativeOutput = z.infer<typeof NarrativeOutputSchema>;
+export type NarrativeDraft = z.infer<typeof NarrativeDraftSchema>;
+export type NarrativeScoreInput = z.infer<typeof NarrativeScoreInputSchema>;
+export type NarrativeScoreOutput = z.infer<typeof NarrativeScoreOutputSchema>;
+export type NarrativeFeedbackInput = z.infer<
+  typeof NarrativeFeedbackInputSchema
+>;
+export type NarrativeFeedbackOutput = z.infer<
+  typeof NarrativeFeedbackOutputSchema
+>;

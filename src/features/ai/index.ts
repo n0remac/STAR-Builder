@@ -7,6 +7,15 @@ import {
   type JobStarQuestionsInput,
   JobStarQuestionsInputSchema,
   JobStarQuestionsOutputSchema,
+  type NarrativeFeedbackInput,
+  NarrativeFeedbackInputSchema,
+  NarrativeFeedbackOutputSchema,
+  type NarrativeInput,
+  NarrativeInputSchema,
+  NarrativeOutputSchema,
+  type NarrativeScoreInput,
+  NarrativeScoreInputSchema,
+  NarrativeScoreOutputSchema,
   type ResumeExtractionInput,
   ResumeExtractionInputSchema,
   ResumeExtractionOutputSchema,
@@ -23,6 +32,9 @@ import {
 import {
   mockJobStarDrafts,
   mockJobStarQuestions,
+  mockCareerNarrative,
+  mockCareerNarrativeFeedback,
+  mockCareerNarrativeScore,
   mockResumeExtraction,
   mockStarAssist,
   mockStarFeedback,
@@ -122,6 +134,54 @@ export async function starScore(input: StarScoreInput) {
     schema: StarScoreOutputSchema,
     system:
       "Score this STAR interview answer from 1 to 10. Evaluate section length, completeness, specificity, personal ownership, action clarity, and STAR structure. Weight the Result heavily: high scores require a meaningful outcome, preferably a metric or clear before-and-after impact. The Task should be clearly described but should usually be shorter than Actions and Result. Penalize vague, generic, missing, or unsupported sections. Return only the score and a short rationale.",
+    user: parsed
+  });
+}
+
+export async function careerNarrative(input: NarrativeInput) {
+  const parsed = NarrativeInputSchema.parse(input);
+
+  if (!hasOpenAIConfig()) {
+    return mockCareerNarrative(parsed);
+  }
+
+  return parseStructuredResponse({
+    name: "career_narrative",
+    schema: NarrativeOutputSchema,
+    system:
+      "Construct an interview-ready career narrative from the supplied STAR answers. Keep every claim grounded in the source stories, cite only supplied STAR response ids, emphasize the selected theme, and do not invent employers, titles, metrics, outcomes, or facts. Return a concise positioning statement, a fuller narrative, a short version, interview delivery guidance, and cited source ids.",
+    user: parsed
+  });
+}
+
+export async function careerNarrativeScore(input: NarrativeScoreInput) {
+  const parsed = NarrativeScoreInputSchema.parse(input);
+
+  if (!hasOpenAIConfig()) {
+    return mockCareerNarrativeScore(parsed);
+  }
+
+  return parseStructuredResponse({
+    name: "career_narrative_score",
+    schema: NarrativeScoreOutputSchema,
+    system:
+      "Score this interview narrative from 1 to 10. Evaluate clarity of theme, specificity, evidence-backed positioning, usefulness of the short version, and practicality of interview delivery guidance. Return only the score and a short rationale.",
+    user: parsed
+  });
+}
+
+export async function careerNarrativeFeedback(input: NarrativeFeedbackInput) {
+  const parsed = NarrativeFeedbackInputSchema.parse(input);
+
+  if (!hasOpenAIConfig()) {
+    return mockCareerNarrativeFeedback(parsed);
+  }
+
+  return parseStructuredResponse({
+    name: "career_narrative_feedback",
+    schema: NarrativeFeedbackOutputSchema,
+    system:
+      "Give concise, actionable feedback for improving this interview narrative. Focus on evidence, theme clarity, delivery, and gaps. Do not rewrite the narrative.",
     user: parsed
   });
 }

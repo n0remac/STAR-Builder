@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  mockCareerNarrative,
+  mockCareerNarrativeFeedback,
+  mockCareerNarrativeScore,
   mockJobStarDrafts,
   mockJobStarQuestions,
   mockResumeExtraction,
@@ -11,6 +14,9 @@ import {
 import {
   JobStarDraftsOutputSchema,
   JobStarQuestionsOutputSchema,
+  NarrativeFeedbackOutputSchema,
+  NarrativeOutputSchema,
+  NarrativeScoreOutputSchema,
   ResumeExtractionOutputSchema,
   StarAssistOutputSchema,
   StarFeedbackOutputSchema,
@@ -151,5 +157,105 @@ describe("AI mock outputs", () => {
     expect(() => StarScoreOutputSchema.parse(output)).not.toThrow();
     expect(output.score).toBeGreaterThanOrEqual(7);
     expect(output.rationale).toContain("measurable");
+  });
+
+  it("creates schema-valid career narrative output with cited sources", () => {
+    const output = mockCareerNarrative({
+      scope: "career",
+      theme: "leadership",
+      jobs: [
+        {
+          job: {
+            title: "Senior Product Engineer",
+            company: "Acme Labs",
+            start: "",
+            end: ""
+          },
+          stories: [
+            {
+              id: "star_1",
+              category: "leadership",
+              title: "Led build migration",
+              situation: "Builds were slow.",
+              task: "I owned the migration.",
+              actions: "I aligned teams and migrated pipelines.",
+              result: "Builds became 35% faster.",
+              score: 8
+            }
+          ]
+        }
+      ]
+    });
+
+    expect(() => NarrativeOutputSchema.parse(output)).not.toThrow();
+    expect(output.citedSourceIds).toContain("star_1");
+  });
+
+  it("creates schema-valid job narrative output", () => {
+    const output = mockCareerNarrative({
+      scope: "job",
+      theme: "technical_depth",
+      job: {
+        title: "Staff Engineer",
+        company: "Beta Co",
+        start: "",
+        end: ""
+      },
+      jobs: [
+        {
+          job: {
+            title: "Staff Engineer",
+            company: "Beta Co",
+            start: "",
+            end: ""
+          },
+          stories: [
+            {
+              id: "star_2",
+              category: "achievement",
+              title: "Rebuilt data sync",
+              situation: "Sync jobs failed often.",
+              task: "I owned reliability.",
+              actions: "I redesigned retries and observability.",
+              result: "Failures dropped by 40%.",
+              score: 7
+            }
+          ]
+        }
+      ]
+    });
+
+    expect(() => NarrativeOutputSchema.parse(output)).not.toThrow();
+    expect(output.positioning).toContain("Staff Engineer");
+    expect(output.citedSourceIds).toEqual(["star_2"]);
+  });
+
+  it("scores and gives feedback for a narrative", () => {
+    const draft = {
+      title: "Impact narrative",
+      positioning:
+        "My narrative centers on impact through measurable engineering work.",
+      fullNarrative:
+        "Across my roles, I have repeatedly found ambiguous technical problems, clarified the path forward, and delivered improvements that teams could measure. I use STAR stories to connect that pattern to concrete outcomes.",
+      shortVersion:
+        "I turn ambiguous engineering problems into measurable product and team outcomes.",
+      interviewGuidance:
+        "Lead with the positioning statement, then move into the clearest STAR story and close with the result before offering a second proof point."
+    };
+    const score = mockCareerNarrativeScore({
+      scope: "career",
+      theme: "impact",
+      draft
+    });
+    const feedback = mockCareerNarrativeFeedback({
+      scope: "career",
+      theme: "impact",
+      draft
+    });
+
+    expect(() => NarrativeScoreOutputSchema.parse(score)).not.toThrow();
+    expect(score.score).toBeGreaterThanOrEqual(1);
+    expect(score.score).toBeLessThanOrEqual(10);
+    expect(() => NarrativeFeedbackOutputSchema.parse(feedback)).not.toThrow();
   });
 });

@@ -5,6 +5,15 @@ import {
   type JobStarQuestionsInput,
   JobStarQuestionsInputSchema,
   type JobStarQuestionsOutput,
+  type NarrativeFeedbackInput,
+  NarrativeFeedbackInputSchema,
+  type NarrativeFeedbackOutput,
+  type NarrativeInput,
+  NarrativeInputSchema,
+  type NarrativeOutput,
+  type NarrativeScoreInput,
+  NarrativeScoreInputSchema,
+  type NarrativeScoreOutput,
   type ResumeExtractionInput,
   ResumeExtractionInputSchema,
   type ResumeExtractionOutput,
@@ -50,6 +59,10 @@ function wordCount(value: string) {
   return normalizeTextareaText(value)
     .split(/\s+/)
     .filter(Boolean).length;
+}
+
+function readableTheme(theme: string) {
+  return theme.replace(/_/g, " ");
 }
 
 function generatedStar({
@@ -333,5 +346,79 @@ export function mockStarScore(input: StarScoreInput): StarScoreOutput {
             gaps[0] ? `Next, ${gaps.join(" and ")}.` : "It is interview-ready."
           }`
         : `This needs more detail: ${gaps.join(" and ") || "expand the STAR sections"}.`
+  };
+}
+
+export function mockCareerNarrative(input: NarrativeInput): NarrativeOutput {
+  const parsed = NarrativeInputSchema.parse(input);
+  const allStories = parsed.jobs.flatMap((job) =>
+    job.stories.map((story) => ({
+      ...story,
+      job: job.job
+    }))
+  );
+  const citedStories = allStories.slice(0, Math.max(1, Math.min(4, allStories.length)));
+  const primaryStory = citedStories[0];
+  const theme = readableTheme(parsed.theme);
+  const scopeLabel =
+    parsed.scope === "career"
+      ? "career"
+      : `${parsed.job?.title ?? primaryStory?.job.title} at ${
+          parsed.job?.company ?? primaryStory?.job.company
+        }`;
+  const proofPoints = citedStories
+    .map(
+      (story) =>
+        `${story.title} (${story.job.title} at ${story.job.company})`
+    )
+    .join("; ");
+
+  return {
+    title: `${theme[0]?.toUpperCase() ?? "T"}${theme.slice(1)} narrative`,
+    positioning: `My ${scopeLabel} narrative centers on ${theme}, backed by ${proofPoints}.`,
+    fullNarrative: `Across ${scopeLabel}, I can show ${theme} through specific STAR stories rather than broad claims. The strongest proof points are ${proofPoints}. Together, these examples show how I identify what matters, take ownership of the work, and connect execution to outcomes that teams and customers can understand.`,
+    shortVersion: `I bring a ${theme}-oriented track record, with examples such as ${primaryStory?.title ?? "my strongest STAR story"}.`,
+    interviewGuidance: `Lead with the positioning statement, then bridge into ${primaryStory?.title ?? "the clearest cited story"}. Keep the setup brief, emphasize your personal actions, and close with the result before offering another cited example.`,
+    citedSourceIds: citedStories.map((story) => story.id)
+  };
+}
+
+export function mockCareerNarrativeScore(
+  input: NarrativeScoreInput
+): NarrativeScoreOutput {
+  const parsed = NarrativeScoreInputSchema.parse(input);
+  const totalWords =
+    wordCount(parsed.draft.positioning) +
+    wordCount(parsed.draft.fullNarrative) +
+    wordCount(parsed.draft.shortVersion) +
+    wordCount(parsed.draft.interviewGuidance);
+  const hasGuidance = wordCount(parsed.draft.interviewGuidance) >= 10;
+  const hasShortVersion = wordCount(parsed.draft.shortVersion) >= 8;
+  const hasFullNarrative = wordCount(parsed.draft.fullNarrative) >= 35;
+  const rawScore =
+    2 +
+    (hasGuidance ? 2 : 0) +
+    (hasShortVersion ? 2 : 0) +
+    (hasFullNarrative ? 2 : 0) +
+    (totalWords >= 90 ? 2 : totalWords >= 50 ? 1 : 0);
+  const score = Math.max(1, Math.min(10, rawScore));
+
+  return {
+    score,
+    rationale:
+      score >= 8
+        ? "This narrative has a clear theme, usable delivery guidance, and enough detail to bridge into STAR stories."
+        : "This narrative needs a sharper throughline, a stronger short version, or more concrete interview delivery guidance."
+  };
+}
+
+export function mockCareerNarrativeFeedback(
+  input: NarrativeFeedbackInput
+): NarrativeFeedbackOutput {
+  const parsed = NarrativeFeedbackInputSchema.parse(input);
+  const theme = readableTheme(parsed.theme);
+
+  return {
+    feedback: `Make the ${theme} throughline more explicit, name the proof points you will cite in interviews, and tighten the short version so it can be delivered in under 30 seconds.`
   };
 }
