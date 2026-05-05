@@ -1,9 +1,9 @@
 import {
-  safeNarrativeScope,
-  safeNarrativeTheme
+  normalizeNarrativeTheme,
+  safeNarrativeScope
 } from "@/lib/narrative";
 
-export { safeNarrativeScope, safeNarrativeTheme };
+export { normalizeNarrativeTheme, safeNarrativeScope };
 
 export function validateNarrativeId(narrativeId: string) {
   if (!narrativeId.trim()) {

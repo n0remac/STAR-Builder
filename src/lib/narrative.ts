@@ -1,4 +1,4 @@
-import type { NarrativeScope, NarrativeTheme } from "@prisma/client";
+import type { NarrativeScope } from "@prisma/client";
 
 export const NARRATIVE_SCOPES = ["career", "job"] as const satisfies readonly NarrativeScope[];
 
@@ -9,14 +9,14 @@ export const NARRATIVE_THEMES = [
   "technical_depth",
   "collaboration",
   "impact"
-] as const satisfies readonly NarrativeTheme[];
+] as const;
 
 export const NARRATIVE_SCOPE_LABELS: Record<NarrativeScope, string> = {
   career: "Career-wide",
   job: "Per-job"
 };
 
-export const NARRATIVE_THEME_LABELS: Record<NarrativeTheme, string> = {
+export const NARRATIVE_THEME_LABELS: Record<(typeof NARRATIVE_THEMES)[number], string> = {
   leadership: "Leadership",
   ownership: "Ownership",
   ambiguity: "Ambiguity",
@@ -35,7 +35,7 @@ export type NarrativeDraftSnapshot = {
 
 export type NarrativeFingerprintSnapshot = NarrativeDraftSnapshot & {
   scope: NarrativeScope;
-  theme: NarrativeTheme;
+  theme: string;
   sourceIds: string[];
 };
 
@@ -66,10 +66,18 @@ export function safeNarrativeScope(value: string): NarrativeScope {
     : "career";
 }
 
-export function safeNarrativeTheme(value: string): NarrativeTheme {
-  return NARRATIVE_THEMES.includes(value as NarrativeTheme)
-    ? (value as NarrativeTheme)
-    : "impact";
+export function normalizeNarrativeTheme(value: string, fallback = "impact") {
+  const normalized = value.trim().replace(/\s+/g, " ");
+
+  return normalized || fallback;
+}
+
+export function narrativeThemeLabel(theme: string) {
+  const preset = theme as (typeof NARRATIVE_THEMES)[number];
+
+  return NARRATIVE_THEMES.includes(preset)
+    ? NARRATIVE_THEME_LABELS[preset]
+    : normalizeNarrativeTheme(theme);
 }
 
 export function getNarrativeFingerprint({

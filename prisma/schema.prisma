@@ -20,15 +20,6 @@ enum NarrativeScope {
   job
 }
 
-enum NarrativeTheme {
-  leadership
-  ownership
-  ambiguity
-  technical_depth
-  collaboration
-  impact
-}
-
 model User {
   id            String         @id @default(cuid())
   name          String
@@ -103,7 +94,7 @@ model Narrative {
   userId            String
   positionId        String?
   scope             NarrativeScope
-  theme             NarrativeTheme
+  theme             String
   title             String
   positioning       String           @default("")
   fullNarrative     String           @default("")

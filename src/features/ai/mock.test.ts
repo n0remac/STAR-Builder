@@ -4,6 +4,7 @@ import {
   mockCareerNarrative,
   mockCareerNarrativeFeedback,
   mockCareerNarrativeScore,
+  mockNarrativeThemeExtraction,
   mockJobStarDrafts,
   mockJobStarQuestions,
   mockResumeExtraction,
@@ -17,6 +18,7 @@ import {
   NarrativeFeedbackOutputSchema,
   NarrativeOutputSchema,
   NarrativeScoreOutputSchema,
+  NarrativeThemeExtractionOutputSchema,
   ResumeExtractionOutputSchema,
   StarAssistOutputSchema,
   StarFeedbackOutputSchema,
@@ -189,6 +191,40 @@ describe("AI mock outputs", () => {
 
     expect(() => NarrativeOutputSchema.parse(output)).not.toThrow();
     expect(output.citedSourceIds).toContain("star_1");
+  });
+
+  it("extracts exactly three schema-valid narrative themes", () => {
+    const output = mockNarrativeThemeExtraction({
+      scope: "career",
+      jobs: [
+        {
+          job: {
+            title: "Senior Product Engineer",
+            company: "Acme Labs",
+            start: "",
+            end: ""
+          },
+          stories: [
+            {
+              id: "star_1",
+              category: "leadership",
+              title: "Led build migration",
+              situation: "Builds were slow across several teams.",
+              task: "I owned the migration.",
+              actions: "I aligned teams and migrated pipelines.",
+              result: "Builds became 35% faster.",
+              score: 8
+            }
+          ]
+        }
+      ]
+    });
+
+    expect(() =>
+      NarrativeThemeExtractionOutputSchema.parse(output)
+    ).not.toThrow();
+    expect(output.themes).toHaveLength(3);
+    expect(output.themes[0]?.citedSourceIds).toContain("star_1");
   });
 
   it("creates schema-valid job narrative output", () => {

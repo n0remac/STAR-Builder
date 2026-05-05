@@ -6,8 +6,8 @@ import { prisma } from "@/lib/db";
 import { getDefaultUser } from "@/lib/default-user";
 import {
   NARRATIVE_SCOPE_LABELS,
-  NARRATIVE_THEME_LABELS,
-  getNarrativeFingerprint
+  getNarrativeFingerprint,
+  narrativeThemeLabel
 } from "@/lib/narrative";
 import { STAR_CATEGORY_LABELS } from "@/lib/star";
 
@@ -85,7 +85,7 @@ export default async function NarrativeDetailPage({
           </h2>
           <div className="mt-3 flex flex-wrap gap-2">
             <span className="pill">
-              {NARRATIVE_THEME_LABELS[narrative.theme]}
+              {narrativeThemeLabel(narrative.theme)}
             </span>
             <span className="pill">
               {narrative.sources.length} source

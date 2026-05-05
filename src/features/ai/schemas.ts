@@ -133,7 +133,7 @@ export const NarrativeThemeSchema = z.enum([
   "technical_depth",
   "collaboration",
   "impact"
-]);
+]).or(z.string().trim().min(1).max(80));
 
 export const NarrativeStorySchema = StarDraftSchema.extend({
   id: z.string().min(1),
@@ -159,6 +159,20 @@ export const NarrativeOutputSchema = z.object({
   shortVersion: z.string().min(1),
   interviewGuidance: z.string().min(1),
   citedSourceIds: z.array(z.string().min(1)).min(1)
+});
+
+export const NarrativeThemeSuggestionSchema = z.object({
+  theme: z.string().trim().min(1).max(80),
+  rationale: z.string().min(1),
+  citedSourceIds: z.array(z.string().min(1)).min(1)
+});
+
+export const NarrativeThemeExtractionInputSchema = NarrativeInputSchema.omit({
+  theme: true
+});
+
+export const NarrativeThemeExtractionOutputSchema = z.object({
+  themes: z.array(NarrativeThemeSuggestionSchema).length(3)
 });
 
 export const NarrativeDraftSchema = z.object({
@@ -215,6 +229,15 @@ export type NarrativeStory = z.infer<typeof NarrativeStorySchema>;
 export type NarrativeJobStories = z.infer<typeof NarrativeJobStoriesSchema>;
 export type NarrativeInput = z.infer<typeof NarrativeInputSchema>;
 export type NarrativeOutput = z.infer<typeof NarrativeOutputSchema>;
+export type NarrativeThemeSuggestion = z.infer<
+  typeof NarrativeThemeSuggestionSchema
+>;
+export type NarrativeThemeExtractionInput = z.infer<
+  typeof NarrativeThemeExtractionInputSchema
+>;
+export type NarrativeThemeExtractionOutput = z.infer<
+  typeof NarrativeThemeExtractionOutputSchema
+>;
 export type NarrativeDraft = z.infer<typeof NarrativeDraftSchema>;
 export type NarrativeScoreInput = z.infer<typeof NarrativeScoreInputSchema>;
 export type NarrativeScoreOutput = z.infer<typeof NarrativeScoreOutputSchema>;

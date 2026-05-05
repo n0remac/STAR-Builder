@@ -16,6 +16,9 @@ import {
   type NarrativeScoreInput,
   NarrativeScoreInputSchema,
   NarrativeScoreOutputSchema,
+  type NarrativeThemeExtractionInput,
+  NarrativeThemeExtractionInputSchema,
+  NarrativeThemeExtractionOutputSchema,
   type ResumeExtractionInput,
   ResumeExtractionInputSchema,
   ResumeExtractionOutputSchema,
@@ -35,6 +38,7 @@ import {
   mockCareerNarrative,
   mockCareerNarrativeFeedback,
   mockCareerNarrativeScore,
+  mockNarrativeThemeExtraction,
   mockResumeExtraction,
   mockStarAssist,
   mockStarFeedback,
@@ -150,6 +154,24 @@ export async function careerNarrative(input: NarrativeInput) {
     schema: NarrativeOutputSchema,
     system:
       "Construct an interview-ready career narrative from the supplied STAR answers. Keep every claim grounded in the source stories, cite only supplied STAR response ids, emphasize the selected theme, and do not invent employers, titles, metrics, outcomes, or facts. Return a concise positioning statement, a fuller narrative, a short version, interview delivery guidance, and cited source ids.",
+    user: parsed
+  });
+}
+
+export async function narrativeThemeExtraction(
+  input: NarrativeThemeExtractionInput
+) {
+  const parsed = NarrativeThemeExtractionInputSchema.parse(input);
+
+  if (!hasOpenAIConfig()) {
+    return mockNarrativeThemeExtraction(parsed);
+  }
+
+  return parseStructuredResponse({
+    name: "narrative_theme_extraction",
+    schema: NarrativeThemeExtractionOutputSchema,
+    system:
+      "Extract exactly three interview narrative themes from the supplied STAR answers. Themes should be specific, useful for interview positioning, grounded in the source stories, and distinct from each other. Cite only supplied STAR response ids and do not invent facts.",
     user: parsed
   });
 }

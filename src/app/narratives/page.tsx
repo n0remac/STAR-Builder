@@ -5,8 +5,8 @@ import { prisma } from "@/lib/db";
 import { getDefaultUser } from "@/lib/default-user";
 import {
   NARRATIVE_SCOPE_LABELS,
-  NARRATIVE_THEME_LABELS,
-  getNarrativeScoreLabel
+  getNarrativeScoreLabel,
+  narrativeThemeLabel
 } from "@/lib/narrative";
 
 export const dynamic = "force-dynamic";
@@ -120,7 +120,7 @@ export default async function NarrativesPage() {
                                 {NARRATIVE_SCOPE_LABELS[narrative.scope]}
                               </span>
                               <span className="pill">
-                                {NARRATIVE_THEME_LABELS[narrative.theme]}
+                                {narrativeThemeLabel(narrative.theme)}
                               </span>
                               <span className="pill">
                                 {getNarrativeScoreLabel(narrative)}

@@ -14,6 +14,9 @@ import {
   type NarrativeScoreInput,
   NarrativeScoreInputSchema,
   type NarrativeScoreOutput,
+  type NarrativeThemeExtractionInput,
+  NarrativeThemeExtractionInputSchema,
+  type NarrativeThemeExtractionOutput,
   type ResumeExtractionInput,
   ResumeExtractionInputSchema,
   type ResumeExtractionOutput,
@@ -380,6 +383,80 @@ export function mockCareerNarrative(input: NarrativeInput): NarrativeOutput {
     shortVersion: `I bring a ${theme}-oriented track record, with examples such as ${primaryStory?.title ?? "my strongest STAR story"}.`,
     interviewGuidance: `Lead with the positioning statement, then bridge into ${primaryStory?.title ?? "the clearest cited story"}. Keep the setup brief, emphasize your personal actions, and close with the result before offering another cited example.`,
     citedSourceIds: citedStories.map((story) => story.id)
+  };
+}
+
+export function mockNarrativeThemeExtraction(
+  input: NarrativeThemeExtractionInput
+): NarrativeThemeExtractionOutput {
+  const parsed = NarrativeThemeExtractionInputSchema.parse(input);
+  const allStories = parsed.jobs.flatMap((job) =>
+    job.stories.map((story) => ({
+      ...story,
+      job: job.job
+    }))
+  );
+  const sourceIds = allStories.map((story) => story.id);
+  const combinedText = allStories
+    .map((story) =>
+      [
+        story.category,
+        story.title,
+        story.situation,
+        story.task,
+        story.actions,
+        story.result
+      ].join(" ")
+    )
+    .join(" ");
+  const candidates = [
+    {
+      theme: "Measurable impact",
+      pattern: /%|\$|\d|improv|reduc|increas|saved|grew|faster|launched|delivered/i,
+      rationale:
+        "Several STAR answers include outcomes or before-and-after results."
+    },
+    {
+      theme: "Cross-functional leadership",
+      pattern: /lead|align|partner|stakeholder|team|mentor|collabor/i,
+      rationale:
+        "The source stories show influence across people, teams, or functions."
+    },
+    {
+      theme: "Technical ownership",
+      pattern: /engineer|system|pipeline|build|migration|data|technical|architecture|reliability/i,
+      rationale:
+        "The answers include technical problem ownership and implementation detail."
+    },
+    {
+      theme: "Operating through ambiguity",
+      pattern: /ambiguous|unclear|complex|problem|challenge|constraint|risk|clarif/i,
+      rationale:
+        "The stories point to clarifying messy situations and moving work forward."
+    },
+    {
+      theme: "Customer-centered execution",
+      pattern: /customer|support|user|client|experience|product/i,
+      rationale:
+        "The answers connect execution to customer, user, or product outcomes."
+    }
+  ];
+  const matched = candidates.filter((candidate) =>
+    candidate.pattern.test(combinedText)
+  );
+  const themes = [...matched, ...candidates]
+    .filter(
+      (candidate, index, array) =>
+        array.findIndex((item) => item.theme === candidate.theme) === index
+    )
+    .slice(0, 3);
+
+  return {
+    themes: themes.map((theme, index) => ({
+      theme: theme.theme,
+      rationale: theme.rationale,
+      citedSourceIds: sourceIds.slice(0, Math.max(1, Math.min(sourceIds.length, index + 2)))
+    }))
   };
 }
 

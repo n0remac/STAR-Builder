@@ -1,6 +1,6 @@
 "use client";
 
-import type { NarrativeScope, NarrativeTheme } from "@prisma/client";
+import type { NarrativeScope } from "@prisma/client";
 import type { ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -11,8 +11,8 @@ import {
 } from "@/app/narratives/actions";
 import {
   NARRATIVE_SCOPE_LABELS,
-  NARRATIVE_THEME_LABELS,
-  getNarrativeScoreLabel
+  getNarrativeScoreLabel,
+  narrativeThemeLabel
 } from "@/lib/narrative";
 
 type NarrativeEditorState = {
@@ -33,7 +33,7 @@ type NarrativeEditorState = {
 type NarrativeEditorProps = {
   id: string;
   scope: NarrativeScope;
-  theme: NarrativeTheme;
+  theme: string;
   sourceIds: string[];
   initialState: NarrativeEditorState;
 };
@@ -100,7 +100,7 @@ export function NarrativeEditor({
             </h1>
             <div className="mt-3 flex flex-wrap gap-2">
               <span className="pill">{NARRATIVE_SCOPE_LABELS[scope]}</span>
-              <span className="pill">{NARRATIVE_THEME_LABELS[theme]}</span>
+              <span className="pill">{narrativeThemeLabel(theme)}</span>
               <span className="pill">{getNarrativeScoreLabel(state)}</span>
             </div>
             {state.scoreRationale ? (

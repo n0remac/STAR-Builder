@@ -4,8 +4,9 @@ import {
   getNarrativeFingerprint,
   getNarrativeScoreLabel,
   isNarrativeScoreFresh,
-  safeNarrativeScope,
-  safeNarrativeTheme
+  narrativeThemeLabel,
+  normalizeNarrativeTheme,
+  safeNarrativeScope
 } from "@/lib/narrative";
 
 const snapshot = {
@@ -23,8 +24,10 @@ describe("narrative utilities", () => {
   it("falls back for invalid scope and theme values", () => {
     expect(safeNarrativeScope("job")).toBe("job");
     expect(safeNarrativeScope("invalid")).toBe("career");
-    expect(safeNarrativeTheme("leadership")).toBe("leadership");
-    expect(safeNarrativeTheme("invalid")).toBe("impact");
+    expect(normalizeNarrativeTheme("  custom theme  ")).toBe("custom theme");
+    expect(normalizeNarrativeTheme("")).toBe("impact");
+    expect(narrativeThemeLabel("technical_depth")).toBe("Technical depth");
+    expect(narrativeThemeLabel("custom theme")).toBe("custom theme");
   });
 
   it("formats narrative score labels", () => {

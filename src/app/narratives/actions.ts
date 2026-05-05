@@ -2,16 +2,18 @@
 
 import type {
   NarrativeScope,
-  NarrativeTheme,
   StarCategory
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import type { NarrativeGenerationState } from "@/app/narratives/state";
+import type {
+  NarrativeGenerationState,
+  NarrativeThemeExtractionState
+} from "@/app/narratives/state";
 import {
+  normalizeNarrativeTheme,
   safeNarrativeScope,
-  safeNarrativeTheme,
   validateNarrativeDraft,
   validateNarrativeGeneration,
   validateNarrativeId
@@ -19,7 +21,8 @@ import {
 import {
   careerNarrative,
   careerNarrativeFeedback,
-  careerNarrativeScore
+  careerNarrativeScore,
+  narrativeThemeExtraction
 } from "@/features/ai";
 import type {
   JobContext,
@@ -110,7 +113,7 @@ function fingerprint({
   draft: NarrativeDraft;
   scope: NarrativeScope;
   sourceIds: string[];
-  theme: NarrativeTheme;
+  theme: string;
 }) {
   return getNarrativeFingerprint({
     ...draft,
@@ -127,13 +130,22 @@ function narrativeScoreInput({
 }: {
   draft: NarrativeDraft;
   scope: NarrativeScope;
-  theme: NarrativeTheme;
+  theme: string;
 }) {
   return {
     draft,
     scope,
     theme
   };
+}
+
+function themeFromFormData(formData: FormData) {
+  return normalizeNarrativeTheme(
+    formString(formData, "manualTheme") ||
+      formString(formData, "theme") ||
+      formString(formData, "presetTheme"),
+    "impact"
+  );
 }
 
 function groupSourcesForAi({
@@ -284,7 +296,7 @@ export async function generateNarrativeAction(
   formData: FormData
 ): Promise<NarrativeGenerationState> {
   const scope = safeNarrativeScope(formString(formData, "scope", "career"));
-  const theme = safeNarrativeTheme(formString(formData, "theme", "impact"));
+  const theme = themeFromFormData(formData);
   const positionId = formString(formData, "positionId");
   const validationError = validateNarrativeGeneration({ positionId, scope });
   let narrativeId = "";
@@ -364,10 +376,59 @@ export async function generateNarrativeAction(
   redirect(`/narratives/${narrativeId}`);
 }
 
+export async function extractNarrativeThemesAction(
+  _previousState: NarrativeThemeExtractionState,
+  formData: FormData
+): Promise<NarrativeThemeExtractionState> {
+  const scope = safeNarrativeScope(formString(formData, "scope", "career"));
+  const positionId = formString(formData, "positionId");
+  const validationError = validateNarrativeGeneration({ positionId, scope });
+
+  if (validationError) {
+    return { scope, positionId, error: validationError };
+  }
+
+  try {
+    const sourceSet = await findSources({ positionId, scope });
+
+    if (sourceSet.sources.length === 0) {
+      return {
+        scope,
+        positionId,
+        error:
+          scope === "job"
+            ? "Add at least one STAR answer to this job before extracting themes."
+            : "Add at least one STAR answer before extracting themes."
+      };
+    }
+
+    return {
+      scope,
+      positionId,
+      output: await narrativeThemeExtraction({
+        scope,
+        job: sourceSet.job,
+        jobs: groupSourcesForAi({
+          job: sourceSet.job,
+          scope,
+          sources: sourceSet.sources
+        })
+      })
+    };
+  } catch (error) {
+    return {
+      scope,
+      positionId,
+      error:
+        error instanceof Error ? error.message : "Could not extract themes."
+    };
+  }
+}
+
 export async function updateNarrativeAction(formData: FormData) {
   const id = formString(formData, "id");
   const scope = safeNarrativeScope(formString(formData, "scope", "career"));
-  const theme = safeNarrativeTheme(formString(formData, "theme", "impact"));
+  const theme = themeFromFormData(formData);
   const draft = draftFromFormData(formData);
   const sourceIds = sourceIdsFromFormData(formData);
   const currentScore = scoreStateFromFormData(formData);
@@ -420,7 +481,7 @@ export async function updateNarrativeAction(formData: FormData) {
 export async function regenerateNarrativeScoreAction(formData: FormData) {
   const id = formString(formData, "id");
   const scope = safeNarrativeScope(formString(formData, "scope", "career"));
-  const theme = safeNarrativeTheme(formString(formData, "theme", "impact"));
+  const theme = themeFromFormData(formData);
   const draft = draftFromFormData(formData);
   const sourceIds = sourceIdsFromFormData(formData);
   const idError = validateNarrativeId(id);
@@ -460,7 +521,7 @@ export async function regenerateNarrativeScoreAction(formData: FormData) {
 export async function requestNarrativeFeedbackAction(formData: FormData) {
   const id = formString(formData, "id");
   const scope = safeNarrativeScope(formString(formData, "scope", "career"));
-  const theme = safeNarrativeTheme(formString(formData, "theme", "impact"));
+  const theme = themeFromFormData(formData);
   const draft = draftFromFormData(formData);
   const sourceIds = sourceIdsFromFormData(formData);
   const currentScore = scoreStateFromFormData(formData);
