@@ -34,6 +34,16 @@ export type StarScoreDraftSnapshot = {
   scoreDraftHash: string | null;
 };
 
+export type StarPersistedScoreSnapshot = StarScoreDraftSnapshot & {
+  scoreRationale: string;
+  scoredAt: Date | null;
+};
+
+export type StarScoreOutputSnapshot = {
+  score: number;
+  rationale: string;
+};
+
 export function safeStarCategory(value: string): StarCategory {
   return STAR_CATEGORIES.includes(value as StarCategory)
     ? (value as StarCategory)
@@ -84,4 +94,43 @@ export function isStarScoreFreshForDraft(
     Boolean(score.scoreDraftHash) &&
     score.scoreDraftHash === getStarDraftFingerprint(draft)
   );
+}
+
+export function scoreStateForStarDraft(
+  draft: StarDraftSnapshot,
+  current: StarPersistedScoreSnapshot
+) {
+  if (current.score === null) {
+    return {
+      score: null,
+      scoreRationale: "",
+      scoredAt: null,
+      scoreIsStale: false,
+      scoreDraftHash: null
+    };
+  }
+
+  const scoreIsFresh = isStarScoreFreshForDraft(draft, current);
+
+  return {
+    score: current.score,
+    scoreRationale: current.scoreRationale,
+    scoredAt: current.scoredAt,
+    scoreIsStale: !scoreIsFresh,
+    scoreDraftHash: current.scoreDraftHash
+  };
+}
+
+export function freshStarScoreState(
+  draft: StarDraftSnapshot,
+  score: StarScoreOutputSnapshot,
+  scoredAt = new Date()
+) {
+  return {
+    score: score.score,
+    scoreRationale: score.rationale,
+    scoredAt,
+    scoreIsStale: false,
+    scoreDraftHash: getStarDraftFingerprint(draft)
+  };
 }

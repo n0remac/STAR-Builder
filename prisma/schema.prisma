@@ -18,17 +18,83 @@ enum StarCategory {
 enum NarrativeScope {
   career
   job
+  target_job
 }
 
 model User {
   id            String         @id @default(cuid())
-  name          String
+  name          String?
   email         String?        @unique
+  emailVerified DateTime?
+  image         String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+  accounts      Account[]
+  sessions      Session[]
+  profile       Profile?
   resumes       Resume[]
   starResponses StarResponse[]
   narratives    Narrative[]
+  targetJobs    TargetJob[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Profile {
+  id                       String    @id @default(cuid())
+  userId                   String    @unique
+  displayName              String    @default("")
+  headline                 String    @default("")
+  contactEmail             String    @default("")
+  location                 String    @default("")
+  links                    String    @default("")
+  resumePath               String    @default("/resume.pdf")
+  isPublic                 Boolean   @default(false)
+  publicSlug               String?   @unique
+  publicResumeVisible      Boolean   @default(false)
+  summary                  String    @default("")
+  metaNarrativeJson        String    @default("")
+  metaNarrativeGeneratedAt DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  user                     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Resume {
@@ -44,87 +110,113 @@ model Resume {
 }
 
 model Position {
-  id          String           @id @default(cuid())
-  resumeId    String
-  title       String
-  company     String
-  start       String?
-  end         String?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  resume      Resume           @relation(fields: [resumeId], references: [id], onDelete: Cascade)
-  starResponses StarResponse[]
-  narratives  Narrative[]
+  id             String         @id @default(cuid())
+  resumeId       String
+  title          String
+  company        String
+  start          String?
+  end            String?
+  profileVisible Boolean        @default(false)
+  profileOrder   Int            @default(0)
+  profileSummary String         @default("")
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  resume         Resume         @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  starResponses  StarResponse[]
+  narratives     Narrative[]
 
   @@index([resumeId])
 }
 
 model StarResponse {
-  id         String       @id @default(cuid())
-  userId     String
-  positionId String
-  category   StarCategory @default(achievement)
-  title      String
-  situation  String       @default("")
-  task       String       @default("")
-  actions    String       @default("")
-  result     String       @default("")
-  situationFeedback String @default("")
-  taskFeedback String      @default("")
-  actionsFeedback String   @default("")
-  resultFeedback String    @default("")
-  score      Int?
-  scoreRationale String   @default("")
-  scoredAt   DateTime?
-  scoreIsStale Boolean    @default(false)
-  scoreDraftHash String?
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  position   Position     @relation(fields: [positionId], references: [id], onDelete: Cascade)
-  narrativeSources NarrativeSource[]
+  id                String            @id @default(cuid())
+  userId            String
+  positionId        String
+  category          StarCategory      @default(achievement)
+  title             String
+  situation         String            @default("")
+  task              String            @default("")
+  actions           String            @default("")
+  result            String            @default("")
+  situationFeedback String            @default("")
+  taskFeedback      String            @default("")
+  actionsFeedback   String            @default("")
+  resultFeedback    String            @default("")
+  score             Int?
+  scoreRationale    String            @default("")
+  scoredAt          DateTime?
+  scoreIsStale      Boolean           @default(false)
+  scoreDraftHash    String?
+  profileVisible    Boolean           @default(false)
+  profileOrder      Int               @default(0)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  position          Position          @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  narrativeSources  NarrativeSource[]
 
   @@index([userId])
   @@index([positionId])
   @@index([category])
 }
 
+model TargetJob {
+  id          String      @id @default(cuid())
+  userId      String
+  title       String
+  company     String
+  description String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  narratives  Narrative[]
+
+  @@index([userId])
+  @@index([company])
+  @@index([title])
+}
+
 model Narrative {
-  id                String           @id @default(cuid())
+  id                String            @id @default(cuid())
   userId            String
   positionId        String?
+  targetJobId       String?
   scope             NarrativeScope
   theme             String
   title             String
-  positioning       String           @default("")
-  fullNarrative     String           @default("")
-  shortVersion      String           @default("")
-  interviewGuidance String           @default("")
-  feedback          String           @default("")
+  positioning       String            @default("")
+  fullNarrative     String            @default("")
+  shortVersion      String            @default("")
+  interviewGuidance String            @default("")
+  feedback          String            @default("")
+  profileVisible    Boolean           @default(false)
+  profileOrder      Int               @default(0)
   score             Int?
-  scoreRationale    String           @default("")
+  scoreRationale    String            @default("")
   scoredAt          DateTime?
-  scoreIsStale      Boolean          @default(false)
+  scoreIsStale      Boolean           @default(false)
   sourceHash        String?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  position          Position?        @relation(fields: [positionId], references: [id], onDelete: SetNull)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  position          Position?         @relation(fields: [positionId], references: [id], onDelete: SetNull)
+  targetJob         TargetJob?        @relation(fields: [targetJobId], references: [id], onDelete: SetNull)
   sources           NarrativeSource[]
 
   @@index([userId])
   @@index([positionId])
+  @@index([targetJobId])
   @@index([scope])
   @@index([theme])
 }
 
 model NarrativeSource {
-  id             String       @id @default(cuid())
-  narrativeId    String
-  starResponseId String
-  roleInNarrative String      @default("")
-  narrative      Narrative    @relation(fields: [narrativeId], references: [id], onDelete: Cascade)
-  starResponse   StarResponse @relation(fields: [starResponseId], references: [id], onDelete: Cascade)
+  id              String       @id @default(cuid())
+  narrativeId     String
+  starResponseId  String
+  roleInNarrative String       @default("")
+  narrative       Narrative    @relation(fields: [narrativeId], references: [id], onDelete: Cascade)
+  starResponse    StarResponse @relation(fields: [starResponseId], references: [id], onDelete: Cascade)
 
   @@unique([narrativeId, starResponseId])
   @@index([narrativeId])

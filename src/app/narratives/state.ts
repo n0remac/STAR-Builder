@@ -8,7 +8,7 @@ export const initialNarrativeGenerationState: NarrativeGenerationState = {};
 
 export type NarrativeThemeExtractionState = {
   error?: string;
-  scope?: "career" | "job";
+  scope?: "career" | "job" | "target_job";
   positionId?: string;
   output?: NarrativeThemeExtractionOutput;
 };

@@ -1,6 +1,10 @@
 import type { NarrativeScope } from "@prisma/client";
 
-export const NARRATIVE_SCOPES = ["career", "job"] as const satisfies readonly NarrativeScope[];
+export const NARRATIVE_SCOPES = [
+  "career",
+  "job",
+  "target_job"
+] as const satisfies readonly NarrativeScope[];
 
 export const NARRATIVE_THEMES = [
   "leadership",
@@ -13,7 +17,14 @@ export const NARRATIVE_THEMES = [
 
 export const NARRATIVE_SCOPE_LABELS: Record<NarrativeScope, string> = {
   career: "Career-wide",
-  job: "Per-job"
+  job: "Per-job",
+  target_job: "Target job"
+};
+
+export type NarrativeTargetJobSnapshot = {
+  title: string;
+  company: string;
+  description: string;
 };
 
 export const NARRATIVE_THEME_LABELS: Record<(typeof NARRATIVE_THEMES)[number], string> = {
@@ -37,6 +48,7 @@ export type NarrativeFingerprintSnapshot = NarrativeDraftSnapshot & {
   scope: NarrativeScope;
   theme: string;
   sourceIds: string[];
+  targetJob?: NarrativeTargetJobSnapshot | null;
 };
 
 export type NarrativeScoreSnapshot = {
@@ -47,6 +59,16 @@ export type NarrativeScoreSnapshot = {
 export type NarrativeScoreHashSnapshot = {
   score: number | null;
   sourceHash: string | null;
+};
+
+export type NarrativePersistedScoreSnapshot = NarrativeScoreHashSnapshot & {
+  scoreRationale: string;
+  scoredAt: Date | null;
+};
+
+export type NarrativeScoreOutputSnapshot = {
+  score: number;
+  rationale: string;
 };
 
 function hashString(content: string) {
@@ -87,6 +109,7 @@ export function getNarrativeFingerprint({
   scope,
   shortVersion,
   sourceIds,
+  targetJob,
   theme,
   title
 }: NarrativeFingerprintSnapshot) {
@@ -95,6 +118,13 @@ export function getNarrativeFingerprint({
       scope,
       theme,
       sourceIds: [...sourceIds].sort(),
+      targetJob: targetJob
+        ? {
+            title: targetJob.title.trim(),
+            company: targetJob.company.trim(),
+            description: targetJob.description.trim()
+          }
+        : null,
       title: title.trim(),
       positioning: positioning.trim(),
       fullNarrative: fullNarrative.trim(),
@@ -124,4 +154,43 @@ export function isNarrativeScoreFresh(
     Boolean(score.sourceHash) &&
     score.sourceHash === getNarrativeFingerprint(snapshot)
   );
+}
+
+export function scoreStateForNarrative(
+  snapshot: NarrativeFingerprintSnapshot,
+  current: NarrativePersistedScoreSnapshot
+) {
+  if (current.score === null) {
+    return {
+      score: null,
+      scoreRationale: "",
+      scoredAt: null,
+      scoreIsStale: false,
+      sourceHash: null
+    };
+  }
+
+  const scoreIsFresh = isNarrativeScoreFresh(snapshot, current);
+
+  return {
+    score: current.score,
+    scoreRationale: current.scoreRationale,
+    scoredAt: current.scoredAt,
+    scoreIsStale: !scoreIsFresh,
+    sourceHash: current.sourceHash
+  };
+}
+
+export function freshNarrativeScoreState(
+  snapshot: NarrativeFingerprintSnapshot,
+  score: NarrativeScoreOutputSnapshot,
+  scoredAt = new Date()
+) {
+  return {
+    score: score.score,
+    scoreRationale: score.rationale,
+    scoredAt,
+    scoreIsStale: false,
+    sourceHash: getNarrativeFingerprint(snapshot)
+  };
 }

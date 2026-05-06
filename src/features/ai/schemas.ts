@@ -42,6 +42,12 @@ export const JobContextSchema = z.object({
   end: z.string().default("")
 });
 
+export const TargetJobContextSchema = z.object({
+  title: z.string().min(1),
+  company: z.string().min(1),
+  description: z.string().min(20)
+});
+
 export const JobStarContextSchema = StarDraftSchema;
 
 export const JobStarQuestionsInputSchema = z.object({
@@ -124,7 +130,7 @@ export const StarScoreOutputSchema = z.object({
   rationale: z.string().min(1)
 });
 
-export const NarrativeScopeSchema = z.enum(["career", "job"]);
+export const NarrativeScopeSchema = z.enum(["career", "job", "target_job"]);
 
 export const NarrativeThemeSchema = z.enum([
   "leadership",
@@ -149,6 +155,7 @@ export const NarrativeInputSchema = z.object({
   scope: NarrativeScopeSchema,
   theme: NarrativeThemeSchema,
   job: JobContextSchema.optional(),
+  targetJob: TargetJobContextSchema.optional(),
   jobs: z.array(NarrativeJobStoriesSchema).min(1)
 });
 
@@ -186,6 +193,7 @@ export const NarrativeDraftSchema = z.object({
 export const NarrativeScoreInputSchema = z.object({
   scope: NarrativeScopeSchema,
   theme: NarrativeThemeSchema,
+  targetJob: TargetJobContextSchema.optional(),
   draft: NarrativeDraftSchema
 });
 
@@ -197,11 +205,108 @@ export const NarrativeScoreOutputSchema = z.object({
 export const NarrativeFeedbackInputSchema = z.object({
   scope: NarrativeScopeSchema,
   theme: NarrativeThemeSchema,
+  targetJob: TargetJobContextSchema.optional(),
   draft: NarrativeDraftSchema
 });
 
 export const NarrativeFeedbackOutputSchema = z.object({
   feedback: z.string().min(1)
+});
+
+export const ProfileSummaryNarrativeSchema = z.object({
+  scope: NarrativeScopeSchema,
+  theme: NarrativeThemeSchema,
+  title: z.string().default(""),
+  positioning: z.string().default(""),
+  fullNarrative: z.string().default(""),
+  shortVersion: z.string().default(""),
+  job: JobContextSchema.optional(),
+  targetJob: TargetJobContextSchema.optional()
+});
+
+export const ProfileSummaryInputSchema = z.object({
+  profile: z.object({
+    displayName: z.string().default(""),
+    headline: z.string().default(""),
+    location: z.string().default("")
+  }),
+  narratives: z.array(ProfileSummaryNarrativeSchema).min(1)
+});
+
+export const ProfileSummaryOutputSchema = z.object({
+  summary: z.string().min(1)
+});
+
+export const ProfileMetaReferenceTypeSchema = z.enum([
+  "answer",
+  "job",
+  "narrative"
+]);
+
+export const ProfileMetaNarrativeSegmentSchema = z.object({
+  text: z.string().min(1),
+  reference: z
+    .object({
+      type: ProfileMetaReferenceTypeSchema,
+      id: z.string().min(1)
+    })
+    .nullable()
+});
+
+export const ProfileMetaNarrativeParagraphSchema = z.object({
+  segments: z.array(ProfileMetaNarrativeSegmentSchema).min(1)
+});
+
+export const ProfileMetaNarrativeOutputSchema = z.object({
+  title: z.string().min(1),
+  paragraphs: z.array(ProfileMetaNarrativeParagraphSchema).min(1),
+  themes: z.array(z.string().trim().min(1))
+});
+
+export const ProfileMetaStarAnswerSchema = StarDraftSchema.extend({
+  id: z.string().min(1),
+  score: z.number().int().min(1).max(10).nullable().default(null)
+});
+
+export const ProfileMetaJobSchema = JobContextSchema.extend({
+  id: z.string().min(1),
+  profileSummary: z.string().default(""),
+  starAnswers: z.array(ProfileMetaStarAnswerSchema).default([])
+});
+
+export const ProfileMetaNarrativeSourceSchema = z.object({
+  starResponseId: z.string().min(1),
+  roleInNarrative: z.string().default("")
+});
+
+export const ProfileMetaSavedNarrativeSchema = z.object({
+  id: z.string().min(1),
+  scope: NarrativeScopeSchema,
+  theme: NarrativeThemeSchema,
+  title: z.string().default(""),
+  positioning: z.string().default(""),
+  fullNarrative: z.string().default(""),
+  shortVersion: z.string().default(""),
+  positionId: z.string().nullable().default(null),
+  targetJob: TargetJobContextSchema.optional(),
+  sources: z.array(ProfileMetaNarrativeSourceSchema).default([])
+});
+
+export const ProfileMetaTargetJobSchema = TargetJobContextSchema.extend({
+  id: z.string().min(1)
+});
+
+export const ProfileMetaNarrativeInputSchema = z.object({
+  profile: z.object({
+    displayName: z.string().default(""),
+    headline: z.string().default(""),
+    contactEmail: z.string().default(""),
+    location: z.string().default("")
+  }),
+  resumeText: z.string().default(""),
+  jobs: z.array(ProfileMetaJobSchema).default([]),
+  narratives: z.array(ProfileMetaSavedNarrativeSchema).default([]),
+  targetJobs: z.array(ProfileMetaTargetJobSchema).default([])
 });
 
 export type ResumeExtractionInput = z.infer<typeof ResumeExtractionInputSchema>;
@@ -210,6 +315,7 @@ export type ResumeExtractionOutput = z.infer<
 >;
 export type StarDraft = z.infer<typeof StarDraftSchema>;
 export type JobContext = z.infer<typeof JobContextSchema>;
+export type TargetJobContext = z.infer<typeof TargetJobContextSchema>;
 export type JobStarQuestionsInput = z.infer<typeof JobStarQuestionsInputSchema>;
 export type JobStarQuestionsOutput = z.infer<
   typeof JobStarQuestionsOutputSchema
@@ -246,4 +352,24 @@ export type NarrativeFeedbackInput = z.infer<
 >;
 export type NarrativeFeedbackOutput = z.infer<
   typeof NarrativeFeedbackOutputSchema
+>;
+export type ProfileSummaryNarrative = z.infer<
+  typeof ProfileSummaryNarrativeSchema
+>;
+export type ProfileSummaryInput = z.infer<typeof ProfileSummaryInputSchema>;
+export type ProfileSummaryOutput = z.infer<typeof ProfileSummaryOutputSchema>;
+export type ProfileMetaReferenceType = z.infer<
+  typeof ProfileMetaReferenceTypeSchema
+>;
+export type ProfileMetaNarrativeSegment = z.infer<
+  typeof ProfileMetaNarrativeSegmentSchema
+>;
+export type ProfileMetaNarrativeParagraph = z.infer<
+  typeof ProfileMetaNarrativeParagraphSchema
+>;
+export type ProfileMetaNarrativeInput = z.infer<
+  typeof ProfileMetaNarrativeInputSchema
+>;
+export type ProfileMetaNarrativeOutput = z.infer<
+  typeof ProfileMetaNarrativeOutputSchema
 >;

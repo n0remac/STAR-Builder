@@ -27,14 +27,12 @@ type NarrativeEditorState = {
   score: number | null;
   scoreRationale: string;
   scoreIsStale: boolean;
-  sourceHash: string;
 };
 
 type NarrativeEditorProps = {
   id: string;
   scope: NarrativeScope;
   theme: string;
-  sourceIds: string[];
   initialState: NarrativeEditorState;
 };
 
@@ -65,7 +63,6 @@ export function NarrativeEditor({
   id,
   initialState,
   scope,
-  sourceIds,
   theme
 }: NarrativeEditorProps) {
   const state = initialState;
@@ -74,23 +71,6 @@ export function NarrativeEditor({
     <section className="card">
       <form action={updateNarrativeAction} className="space-y-5">
         <input type="hidden" name="id" value={id} />
-        <input type="hidden" name="scope" value={scope} />
-        <input type="hidden" name="theme" value={theme} />
-        <input type="hidden" name="score" value={state.score ?? ""} />
-        <input
-          type="hidden"
-          name="scoreRationale"
-          value={state.scoreRationale}
-        />
-        <input type="hidden" name="sourceHash" value={state.sourceHash} />
-        {sourceIds.map((sourceId) => (
-          <input
-            key={sourceId}
-            type="hidden"
-            name="sourceIds"
-            value={sourceId}
-          />
-        ))}
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>

@@ -2,25 +2,10 @@ import "server-only";
 
 import { prisma } from "@/lib/db";
 
-export const DEFAULT_USER_EMAIL = "local@star.test";
-
-export async function getDefaultUser() {
-  return prisma.user.upsert({
-    where: { email: DEFAULT_USER_EMAIL },
-    update: {},
-    create: {
-      email: DEFAULT_USER_EMAIL,
-      name: "Local User"
-    }
-  });
-}
-
-export async function getManualResume() {
-  const user = await getDefaultUser();
-
+export async function getManualResume(userId: string) {
   const existing = await prisma.resume.findFirst({
     where: {
-      userId: user.id,
+      userId,
       source: "manual"
     },
     orderBy: {
@@ -34,15 +19,15 @@ export async function getManualResume() {
 
   return prisma.resume.create({
     data: {
-      userId: user.id,
+      userId,
       source: "manual",
       text: "Manually created jobs and STAR answers."
     }
   });
 }
 
-export async function getManualPosition() {
-  const resume = await getManualResume();
+export async function getManualPosition(userId: string) {
+  const resume = await getManualResume(userId);
 
   const existing = await prisma.position.findFirst({
     where: {

@@ -17,6 +17,12 @@ import {
   type NarrativeThemeExtractionInput,
   NarrativeThemeExtractionInputSchema,
   type NarrativeThemeExtractionOutput,
+  type ProfileMetaNarrativeInput,
+  ProfileMetaNarrativeInputSchema,
+  type ProfileMetaNarrativeOutput,
+  type ProfileSummaryInput,
+  ProfileSummaryInputSchema,
+  type ProfileSummaryOutput,
   type ResumeExtractionInput,
   ResumeExtractionInputSchema,
   type ResumeExtractionOutput,
@@ -363,8 +369,11 @@ export function mockCareerNarrative(input: NarrativeInput): NarrativeOutput {
   const citedStories = allStories.slice(0, Math.max(1, Math.min(4, allStories.length)));
   const primaryStory = citedStories[0];
   const theme = readableTheme(parsed.theme);
+  const targetJob = parsed.targetJob;
   const scopeLabel =
-    parsed.scope === "career"
+    targetJob
+      ? `${targetJob.title} at ${targetJob.company}`
+      : parsed.scope === "career"
       ? "career"
       : `${parsed.job?.title ?? primaryStory?.job.title} at ${
           parsed.job?.company ?? primaryStory?.job.company
@@ -375,6 +384,23 @@ export function mockCareerNarrative(input: NarrativeInput): NarrativeOutput {
         `${story.title} (${story.job.title} at ${story.job.company})`
     )
     .join("; ");
+
+  if (targetJob) {
+    const jobKeywords = normalizeTextareaText(targetJob.description)
+      .split(/\s+/)
+      .filter((word) => word.length > 6)
+      .slice(0, 5)
+      .join(", ");
+
+    return {
+      title: `${theme[0]?.toUpperCase() ?? "T"}${theme.slice(1)} fit for ${targetJob.title}`,
+      positioning: `For ${targetJob.company}'s ${targetJob.title} role, my strongest ${theme} proof points are ${proofPoints}.`,
+      fullNarrative: `For ${targetJob.company}'s ${targetJob.title} role, I would position my background around ${theme} and connect it directly to the job description. The role signals priorities such as ${jobKeywords || "the responsibilities in the job description"}, and my clearest evidence comes from ${proofPoints}. These examples show how I turn relevant experience into specific outcomes without relying on broad claims.`,
+      shortVersion: `I fit this ${targetJob.title} role through ${theme}, with proof such as ${primaryStory?.title ?? "my strongest STAR story"}.`,
+      interviewGuidance: `Open by naming the ${targetJob.company} role, state the ${theme} throughline, then bridge into ${primaryStory?.title ?? "the clearest cited story"}. Keep the job-description connection explicit before moving into STAR details.`,
+      citedSourceIds: citedStories.map((story) => story.id)
+    };
+  }
 
   return {
     title: `${theme[0]?.toUpperCase() ?? "T"}${theme.slice(1)} narrative`,
@@ -497,5 +523,147 @@ export function mockCareerNarrativeFeedback(
 
   return {
     feedback: `Make the ${theme} throughline more explicit, name the proof points you will cite in interviews, and tighten the short version so it can be delivered in under 30 seconds.`
+  };
+}
+
+export function mockProfileSummary(
+  input: ProfileSummaryInput
+): ProfileSummaryOutput {
+  const parsed = ProfileSummaryInputSchema.parse(input);
+  const themes = Array.from(
+    new Set(parsed.narratives.map((narrative) => readableTheme(narrative.theme)))
+  ).slice(0, 3);
+  const roles = parsed.narratives
+    .map((narrative) => narrative.job)
+    .filter((job): job is NonNullable<typeof job> => Boolean(job))
+    .map((job) => `${job.title} at ${job.company}`);
+  const proofPoints = parsed.narratives
+    .map(
+      (narrative) =>
+        narrative.positioning ||
+        narrative.shortVersion ||
+        narrative.fullNarrative ||
+        narrative.title
+    )
+    .filter(Boolean)
+    .slice(0, 3);
+  const name = parsed.profile.displayName || "I";
+  const headline = parsed.profile.headline
+    ? `${parsed.profile.headline}. `
+    : "";
+  const roleText =
+    roles.length > 0
+      ? `across roles including ${Array.from(new Set(roles)).slice(0, 3).join(", ")}`
+      : "across product and engineering work";
+  const themeText =
+    themes.length > 0
+      ? ` My work consistently centers on ${themes.join(", ")}.`
+      : "";
+
+  return {
+    summary: `${name} is ${headline}an engineer who turns complex problems into shipped, measurable systems ${roleText}.${themeText} The strongest throughline in the saved narratives is practical ownership: finding the highest-leverage problem, building the technical path forward, and connecting execution to outcomes. ${proofPoints.join(" ")}`
+  };
+}
+
+export function mockProfileMetaNarrative(
+  input: ProfileMetaNarrativeInput
+): ProfileMetaNarrativeOutput {
+  const parsed = ProfileMetaNarrativeInputSchema.parse(input);
+  const firstJob = parsed.jobs[0];
+  const firstAnswer = parsed.jobs.flatMap((job) => job.starAnswers)[0];
+  const firstNarrative = parsed.narratives[0];
+  const themes = Array.from(
+    new Set([
+      ...parsed.narratives.map((narrative) => readableTheme(narrative.theme)),
+      firstAnswer?.category ? readableTheme(firstAnswer.category) : ""
+    ].filter(Boolean))
+  ).slice(0, 4);
+  const displayName = parsed.profile.displayName || "This engineer";
+  const headline = parsed.profile.headline
+    ? `${parsed.profile.headline}, `
+    : "";
+  const jobLabel = firstJob
+    ? `${firstJob.title} at ${firstJob.company}`
+    : "the roles captured in this workbench";
+  const answerLabel = firstAnswer?.title ?? "the strongest STAR evidence";
+  const narrativeLabel = firstNarrative?.title ?? "the saved narratives";
+
+  return {
+    title: `${displayName}'s career narrative`,
+    themes,
+    paragraphs: [
+      {
+        segments: [
+          {
+            text: `${displayName} is ${headline}an engineer whose career pattern is turning ambiguous technical and product problems into practical systems. `,
+            reference: null
+          },
+          firstJob
+            ? {
+                text: jobLabel,
+                reference: {
+                  type: "job",
+                  id: firstJob.id
+                }
+              }
+            : {
+                text: jobLabel,
+                reference: null
+              },
+          {
+            text: " is one anchor point for that pattern, showing how the work connects role context to shipped outcomes.",
+            reference: null
+          }
+        ]
+      },
+      {
+        segments: [
+          {
+            text: "The clearest evidence comes through specific STAR stories such as ",
+            reference: null
+          },
+          firstAnswer
+            ? {
+                text: answerLabel,
+                reference: {
+                  type: "answer",
+                  id: firstAnswer.id
+                }
+              }
+            : {
+                text: answerLabel,
+                reference: null
+              },
+          {
+            text: ", where the emphasis is on ownership, execution detail, and results rather than broad claims.",
+            reference: null
+          }
+        ]
+      },
+      {
+        segments: [
+          {
+            text: "Across the generated narrative library, ",
+            reference: null
+          },
+          firstNarrative
+            ? {
+                text: narrativeLabel,
+                reference: {
+                  type: "narrative",
+                  id: firstNarrative.id
+                }
+              }
+            : {
+                text: narrativeLabel,
+                reference: null
+              },
+          {
+            text: ` ties those examples into a broader throughline: ${themes.length > 0 ? themes.join(", ") : "technical ownership, collaboration, and measurable impact"}.`,
+            reference: null
+          }
+        ]
+      }
+    ]
   };
 }

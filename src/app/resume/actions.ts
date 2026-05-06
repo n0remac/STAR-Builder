@@ -3,51 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { resumeExtraction, starScore } from "@/features/ai";
-import {
-  ResumeExtractionOutputSchema,
-  type StarDraft
-} from "@/features/ai/schemas";
+import { resumeExtraction } from "@/features/ai";
+import { ResumeExtractionOutputSchema } from "@/features/ai/schemas";
 import type { ResumeExtractionState } from "@/app/resume/state";
+import { requireCurrentUserForAction } from "@/lib/current-user";
 import { prisma } from "@/lib/db";
-import { getDefaultUser } from "@/lib/default-user";
 import { formString, parseJsonField } from "@/lib/form";
 import { normalizeTextareaText } from "@/lib/normalization";
-import { getStarDraftFingerprint } from "@/lib/star";
-import { generateStarFeedbackFields } from "@/lib/star-feedback";
-
-async function scoredStarData({
-  answer,
-  job
-}: {
-  answer: StarDraft;
-  job: {
-    title: string;
-    company: string;
-    start: string;
-    end: string;
-  };
-}) {
-  const [score, feedback] = await Promise.all([
-    starScore({ draft: answer }),
-    generateStarFeedbackFields({ draft: answer, job })
-  ]);
-
-  return {
-    category: answer.category,
-    title: answer.title,
-    situation: answer.situation,
-    task: answer.task,
-    actions: answer.actions,
-    result: answer.result,
-    ...feedback,
-    score: score.score,
-    scoreRationale: score.rationale,
-    scoredAt: new Date(),
-    scoreIsStale: false,
-    scoreDraftHash: getStarDraftFingerprint(answer)
-  };
-}
+import { scoredStarResponseFields } from "@/lib/star-scoring";
 
 export async function extractResumeAction(
   _previousState: ResumeExtractionState,
@@ -94,14 +57,14 @@ export async function saveExtractionAction(formData: FormData) {
     throw new Error("Cannot save an empty extraction.");
   }
 
-  const user = await getDefaultUser();
+  const user = await requireCurrentUserForAction();
   const scoredPositions = await Promise.all(
     extraction.positions.map(async (position) => ({
       ...position,
       starAnswers: await Promise.all(
         position.starAnswers.map((answer) =>
-          scoredStarData({
-            answer,
+          scoredStarResponseFields({
+            draft: answer,
             job: {
               title: position.title,
               company: position.company,

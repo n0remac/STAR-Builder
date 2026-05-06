@@ -7,6 +7,8 @@ import {
   mockNarrativeThemeExtraction,
   mockJobStarDrafts,
   mockJobStarQuestions,
+  mockProfileMetaNarrative,
+  mockProfileSummary,
   mockResumeExtraction,
   mockStarAssist,
   mockStarFeedback,
@@ -19,6 +21,8 @@ import {
   NarrativeOutputSchema,
   NarrativeScoreOutputSchema,
   NarrativeThemeExtractionOutputSchema,
+  ProfileMetaNarrativeOutputSchema,
+  ProfileSummaryOutputSchema,
   ResumeExtractionOutputSchema,
   StarAssistOutputSchema,
   StarFeedbackOutputSchema,
@@ -266,6 +270,56 @@ describe("AI mock outputs", () => {
     expect(output.citedSourceIds).toEqual(["star_2"]);
   });
 
+  it("creates schema-valid target job narrative output with selected sources only", () => {
+    const output = mockCareerNarrative({
+      scope: "target_job",
+      theme: "platform reliability",
+      targetJob: {
+        title: "Staff Platform Engineer",
+        company: "Gamma Systems",
+        description:
+          "Own developer platform reliability, improve deployment workflows, and partner with product engineering teams."
+      },
+      jobs: [
+        {
+          job: {
+            title: "Senior Product Engineer",
+            company: "Acme Labs",
+            start: "",
+            end: ""
+          },
+          stories: [
+            {
+              id: "star_1",
+              category: "achievement",
+              title: "Rebuilt deployment pipeline",
+              situation: "Deployments were unreliable.",
+              task: "I owned the reliability work.",
+              actions: "I redesigned workflows and added observability.",
+              result: "Deploy failures dropped by 40%.",
+              score: 8
+            },
+            {
+              id: "star_2",
+              category: "collaboration",
+              title: "Aligned product teams",
+              situation: "Teams used different release practices.",
+              task: "I needed to align rollout habits.",
+              actions: "I partnered with leads and built shared guidance.",
+              result: "Release coordination improved across teams.",
+              score: 7
+            }
+          ]
+        }
+      ]
+    });
+
+    expect(() => NarrativeOutputSchema.parse(output)).not.toThrow();
+    expect(output.positioning).toContain("Gamma Systems");
+    expect(output.fullNarrative).toContain("Staff Platform Engineer");
+    expect(output.citedSourceIds).toEqual(["star_1", "star_2"]);
+  });
+
   it("scores and gives feedback for a narrative", () => {
     const draft = {
       title: "Impact narrative",
@@ -293,5 +347,105 @@ describe("AI mock outputs", () => {
     expect(score.score).toBeGreaterThanOrEqual(1);
     expect(score.score).toBeLessThanOrEqual(10);
     expect(() => NarrativeFeedbackOutputSchema.parse(feedback)).not.toThrow();
+  });
+
+  it("creates a schema-valid public profile summary", () => {
+    const output = mockProfileSummary({
+      profile: {
+        displayName: "Cameron",
+        headline: "Senior software engineer",
+        location: "San Francisco"
+      },
+      narratives: [
+        {
+          scope: "career",
+          theme: "impact",
+          title: "Impact narrative",
+          positioning:
+            "I improve developer workflows and customer-facing systems.",
+          fullNarrative:
+            "Across roles, I have improved reliability and reduced latency.",
+          shortVersion: "I turn complex systems into measurable outcomes.",
+          job: {
+            title: "Senior Product Engineer",
+            company: "Acme Labs",
+            start: "",
+            end: ""
+          }
+        }
+      ]
+    });
+
+    expect(() => ProfileSummaryOutputSchema.parse(output)).not.toThrow();
+    expect(output.summary).toContain("Cameron");
+    expect(output.summary).toContain("impact");
+  });
+
+  it("creates a schema-valid linked profile meta narrative", () => {
+    const output = mockProfileMetaNarrative({
+      profile: {
+        displayName: "Cameron",
+        headline: "Senior software engineer",
+        contactEmail: "cameron@example.com",
+        location: "San Francisco"
+      },
+      resumeText: "Senior engineer focused on product systems.",
+      jobs: [
+        {
+          id: "job_1",
+          title: "Senior Product Engineer",
+          company: "Acme Labs",
+          start: "",
+          end: "",
+          profileSummary: "",
+          starAnswers: [
+            {
+              id: "answer_1",
+              category: "achievement",
+              title: "Reduced build time",
+              situation: "Builds were slow.",
+              task: "I owned the migration.",
+              actions: "I aligned teams and migrated pipelines.",
+              result: "Builds became 35% faster.",
+              score: 8
+            }
+          ]
+        }
+      ],
+      narratives: [
+        {
+          id: "narrative_1",
+          scope: "career",
+          theme: "impact",
+          title: "Impact narrative",
+          positioning: "I improve developer workflows.",
+          fullNarrative: "I improve systems across teams.",
+          shortVersion: "I create measurable outcomes.",
+          positionId: "job_1",
+          sources: [
+            {
+              starResponseId: "answer_1",
+              roleInNarrative: "Cited"
+            }
+          ]
+        }
+      ],
+      targetJobs: []
+    });
+
+    expect(() => ProfileMetaNarrativeOutputSchema.parse(output)).not.toThrow();
+    expect(output.paragraphs.some((paragraph) =>
+      paragraph.segments.some((segment) => segment.reference?.id === "job_1")
+    )).toBe(true);
+    expect(output.paragraphs.some((paragraph) =>
+      paragraph.segments.some(
+        (segment) => segment.reference?.id === "answer_1"
+      )
+    )).toBe(true);
+    expect(output.paragraphs.some((paragraph) =>
+      paragraph.segments.some(
+        (segment) => segment.reference?.id === "narrative_1"
+      )
+    )).toBe(true);
   });
 });

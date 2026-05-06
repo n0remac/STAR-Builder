@@ -6,5 +6,4 @@ export type StarAnswerEditorState = {
   score: number | null;
   scoreRationale: string;
   scoreIsStale: boolean;
-  scoreDraftHash: string;
 };

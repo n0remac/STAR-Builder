@@ -12,20 +12,18 @@ import {
   validateManualJobInput,
   validateManualStarInput
 } from "@/app/jobs/validation";
-import { jobStarDrafts, jobStarQuestions, starScore } from "@/features/ai";
-import {
-  JobStarQuestionsOutputSchema,
-  type StarDraft
-} from "@/features/ai/schemas";
+import { jobStarDrafts, jobStarQuestions } from "@/features/ai";
+import { JobStarQuestionsOutputSchema } from "@/features/ai/schemas";
+import { requireCurrentUserForAction } from "@/lib/current-user";
 import { prisma } from "@/lib/db";
-import { getDefaultUser, getManualResume } from "@/lib/default-user";
 import { formString, parseJsonField } from "@/lib/form";
+import { getManualResume } from "@/lib/manual-resume.server";
 import { normalizeTextareaText } from "@/lib/normalization";
-import { getStarDraftFingerprint } from "@/lib/star";
+import { scoredStarResponseFields } from "@/lib/star-scoring";
 import { generateStarFeedbackFields } from "@/lib/star-feedback";
 
 async function findUserJob(jobId: string) {
-  const user = await getDefaultUser();
+  const user = await requireCurrentUserForAction();
 
   return prisma.position.findFirst({
     where: {
@@ -63,42 +61,6 @@ function jobAiInput(job: NonNullable<Awaited<ReturnType<typeof findUserJob>>>) {
   };
 }
 
-async function scoredStarData({
-  answer,
-  job
-}: {
-  answer: StarDraft;
-  job: NonNullable<Awaited<ReturnType<typeof findUserJob>>>;
-}) {
-  const [score, feedback] = await Promise.all([
-    starScore({ draft: answer }),
-    generateStarFeedbackFields({
-      draft: answer,
-      job: {
-        title: job.title,
-        company: job.company,
-        start: job.start ?? "",
-        end: job.end ?? ""
-      }
-    })
-  ]);
-
-  return {
-    category: answer.category,
-    title: answer.title,
-    situation: answer.situation,
-    task: answer.task,
-    actions: answer.actions,
-    result: answer.result,
-    ...feedback,
-    score: score.score,
-    scoreRationale: score.rationale,
-    scoredAt: new Date(),
-    scoreIsStale: false,
-    scoreDraftHash: getStarDraftFingerprint(answer)
-  };
-}
-
 export async function createJobAction(formData: FormData) {
   const title = formString(formData, "title");
   const company = formString(formData, "company");
@@ -108,7 +70,8 @@ export async function createJobAction(formData: FormData) {
     throw new Error(validationError);
   }
 
-  const resume = await getManualResume();
+  const user = await requireCurrentUserForAction();
+  const resume = await getManualResume(user.id);
   const job = await prisma.position.create({
     data: {
       resumeId: resume.id,
@@ -133,7 +96,7 @@ export async function createJobStarAction(formData: FormData) {
     throw new Error(validationError);
   }
 
-  const user = await getDefaultUser();
+  const user = await requireCurrentUserForAction();
   const job = await findUserJob(jobId);
 
   if (!job) {
@@ -213,7 +176,7 @@ export async function createJobDraftStarsAction(formData: FormData) {
     throw new Error(validationError);
   }
 
-  const user = await getDefaultUser();
+  const user = await requireCurrentUserForAction();
   const job = await findUserJob(jobId);
 
   if (!job) {
@@ -247,7 +210,17 @@ export async function createJobDraftStarsAction(formData: FormData) {
     answers: answeredQuestions
   });
   const scoredDrafts = await Promise.all(
-    drafts.starAnswers.map((answer) => scoredStarData({ answer, job }))
+    drafts.starAnswers.map((answer) =>
+      scoredStarResponseFields({
+        draft: answer,
+        job: {
+          title: job.title,
+          company: job.company,
+          start: job.start ?? "",
+          end: job.end ?? ""
+        }
+      })
+    )
   );
 
   await prisma.starResponse.createMany({

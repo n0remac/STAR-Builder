@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 
 import { createJobStarAction } from "@/app/jobs/actions";
 import { JobAiPanel } from "@/app/jobs/_components/job-ai-panel";
+import { requireCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/db";
-import { getDefaultUser } from "@/lib/default-user";
 import {
   getStarScoreLabel,
   STAR_CATEGORIES,
@@ -21,7 +21,7 @@ export default async function JobDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const user = await getDefaultUser();
+  const user = await requireCurrentUser();
   const job = await prisma.position.findFirst({
     where: {
       id,

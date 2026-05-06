@@ -19,6 +19,12 @@ import {
   type NarrativeThemeExtractionInput,
   NarrativeThemeExtractionInputSchema,
   NarrativeThemeExtractionOutputSchema,
+  type ProfileMetaNarrativeInput,
+  ProfileMetaNarrativeInputSchema,
+  ProfileMetaNarrativeOutputSchema,
+  type ProfileSummaryInput,
+  ProfileSummaryInputSchema,
+  ProfileSummaryOutputSchema,
   type ResumeExtractionInput,
   ResumeExtractionInputSchema,
   ResumeExtractionOutputSchema,
@@ -39,6 +45,8 @@ import {
   mockCareerNarrativeFeedback,
   mockCareerNarrativeScore,
   mockNarrativeThemeExtraction,
+  mockProfileMetaNarrative,
+  mockProfileSummary,
   mockResumeExtraction,
   mockStarAssist,
   mockStarFeedback,
@@ -153,7 +161,7 @@ export async function careerNarrative(input: NarrativeInput) {
     name: "career_narrative",
     schema: NarrativeOutputSchema,
     system:
-      "Construct an interview-ready career narrative from the supplied STAR answers. Keep every claim grounded in the source stories, cite only supplied STAR response ids, emphasize the selected theme, and do not invent employers, titles, metrics, outcomes, or facts. Return a concise positioning statement, a fuller narrative, a short version, interview delivery guidance, and cited source ids.",
+      "Construct an interview-ready narrative from the supplied STAR answers. When targetJob is provided, tailor the narrative to that target role and job description while keeping every claim grounded in the source stories. Cite only supplied STAR response ids, emphasize the selected theme, and do not invent employers, titles, metrics, outcomes, or facts. Return a concise positioning statement, a fuller narrative, a short version, interview delivery guidance, and cited source ids.",
     user: parsed
   });
 }
@@ -187,7 +195,7 @@ export async function careerNarrativeScore(input: NarrativeScoreInput) {
     name: "career_narrative_score",
     schema: NarrativeScoreOutputSchema,
     system:
-      "Score this interview narrative from 1 to 10. Evaluate clarity of theme, specificity, evidence-backed positioning, usefulness of the short version, and practicality of interview delivery guidance. Return only the score and a short rationale.",
+      "Score this interview narrative from 1 to 10. Evaluate clarity of theme, specificity, evidence-backed positioning, usefulness of the short version, practicality of interview delivery guidance, and fit to the target job when provided. Return only the score and a short rationale.",
     user: parsed
   });
 }
@@ -203,7 +211,39 @@ export async function careerNarrativeFeedback(input: NarrativeFeedbackInput) {
     name: "career_narrative_feedback",
     schema: NarrativeFeedbackOutputSchema,
     system:
-      "Give concise, actionable feedback for improving this interview narrative. Focus on evidence, theme clarity, delivery, and gaps. Do not rewrite the narrative.",
+      "Give concise, actionable feedback for improving this interview narrative. Focus on evidence, theme clarity, delivery, role fit when target job context is provided, and gaps. Do not rewrite the narrative.",
+    user: parsed
+  });
+}
+
+export async function profileSummary(input: ProfileSummaryInput) {
+  const parsed = ProfileSummaryInputSchema.parse(input);
+
+  if (!hasOpenAIConfig()) {
+    return mockProfileSummary(parsed);
+  }
+
+  return parseStructuredResponse({
+    name: "profile_summary",
+    schema: ProfileSummaryOutputSchema,
+    system:
+      "Write a concise public engineer profile summary from the supplied saved narratives. Synthesize a coherent throughline across the narratives, emphasize engineering strengths and evidence-backed impact, and avoid inventing employers, metrics, skills, or claims not supported by the input. Return only the summary.",
+    user: parsed
+  });
+}
+
+export async function profileMetaNarrative(input: ProfileMetaNarrativeInput) {
+  const parsed = ProfileMetaNarrativeInputSchema.parse(input);
+
+  if (!hasOpenAIConfig()) {
+    return mockProfileMetaNarrative(parsed);
+  }
+
+  return parseStructuredResponse({
+    name: "profile_meta_narrative",
+    schema: ProfileMetaNarrativeOutputSchema,
+    system:
+      "Write a broad public career meta narrative for an engineer from the supplied profile, resume text, jobs, STAR answers, target job descriptions, and saved narratives. Synthesize recurring themes across the whole career instead of listing facts. Every linked segment must cite only one supplied id and use the matching reference type: answer, job, or narrative. Do not invent employers, metrics, skills, links, ids, or claims not supported by the input.",
     user: parsed
   });
 }

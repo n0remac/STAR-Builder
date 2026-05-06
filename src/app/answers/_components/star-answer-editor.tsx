@@ -73,22 +73,6 @@ export function StarAnswerEditor({ id, initialState }: StarAnswerEditorProps) {
     <section className="card">
       <form action={updateStarAnswerAction} className="space-y-5">
         <input type="hidden" name="id" value={id} />
-        <input type="hidden" name="score" value={state.score ?? ""} />
-        <input
-          type="hidden"
-          name="scoreRationale"
-          value={state.scoreRationale}
-        />
-        <input
-          type="hidden"
-          name="scoreIsStale"
-          value={String(state.scoreIsStale)}
-        />
-        <input
-          type="hidden"
-          name="scoreDraftHash"
-          value={state.scoreDraftHash}
-        />
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>

@@ -8,9 +8,11 @@ import {
   validateManualJobInput
 } from "@/app/jobs/validation";
 import {
+  freshStarScoreState,
   getStarDraftFingerprint,
   getStarScoreLabel,
-  isStarScoreFreshForDraft
+  isStarScoreFreshForDraft,
+  scoreStateForStarDraft
 } from "@/lib/star";
 
 describe("job workflow validation", () => {
@@ -79,5 +81,112 @@ describe("job workflow validation", () => {
     expect(
       isStarScoreFreshForDraft(draft, { score: null, scoreDraftHash })
     ).toBe(false);
+  });
+
+  it("keeps unscored STAR drafts unscored on save", () => {
+    const draft = {
+      title: "Reduced build time",
+      situation: "Builds were slow.",
+      task: "Own the migration.",
+      actions: "Moved pipelines.",
+      result: "Builds were faster."
+    };
+
+    expect(
+      scoreStateForStarDraft(draft, {
+        score: null,
+        scoreRationale: "",
+        scoredAt: null,
+        scoreDraftHash: null
+      })
+    ).toEqual({
+      score: null,
+      scoreRationale: "",
+      scoredAt: null,
+      scoreIsStale: false,
+      scoreDraftHash: null
+    });
+  });
+
+  it("preserves fresh STAR score state when the draft matches the DB hash", () => {
+    const scoredAt = new Date("2026-01-01T00:00:00.000Z");
+    const draft = {
+      title: "Reduced build time",
+      situation: "Builds were slow.",
+      task: "Own the migration.",
+      actions: "Moved pipelines.",
+      result: "Builds were 35% faster."
+    };
+    const scoreDraftHash = getStarDraftFingerprint(draft);
+
+    expect(
+      scoreStateForStarDraft(draft, {
+        score: 8,
+        scoreRationale: "Strong result.",
+        scoredAt,
+        scoreDraftHash
+      })
+    ).toEqual({
+      score: 8,
+      scoreRationale: "Strong result.",
+      scoredAt,
+      scoreIsStale: false,
+      scoreDraftHash
+    });
+  });
+
+  it("marks existing STAR scores stale when the draft changes", () => {
+    const scoredAt = new Date("2026-01-01T00:00:00.000Z");
+    const draft = {
+      title: "Reduced build time",
+      situation: "Builds were slow.",
+      task: "Own the migration.",
+      actions: "Moved pipelines.",
+      result: "Builds were 35% faster."
+    };
+    const scoreDraftHash = getStarDraftFingerprint(draft);
+
+    expect(
+      scoreStateForStarDraft(
+        { ...draft, result: "Builds became faster." },
+        {
+          score: 8,
+          scoreRationale: "Strong result.",
+          scoredAt,
+          scoreDraftHash
+        }
+      )
+    ).toEqual({
+      score: 8,
+      scoreRationale: "Strong result.",
+      scoredAt,
+      scoreIsStale: true,
+      scoreDraftHash
+    });
+  });
+
+  it("creates fresh STAR score state after regeneration", () => {
+    const scoredAt = new Date("2026-01-01T00:00:00.000Z");
+    const draft = {
+      title: "Reduced build time",
+      situation: "Builds were slow.",
+      task: "Own the migration.",
+      actions: "Moved pipelines.",
+      result: "Builds were 35% faster."
+    };
+
+    expect(
+      freshStarScoreState(
+        draft,
+        { score: 9, rationale: "Interview ready." },
+        scoredAt
+      )
+    ).toEqual({
+      score: 9,
+      scoreRationale: "Interview ready.",
+      scoredAt,
+      scoreIsStale: false,
+      scoreDraftHash: getStarDraftFingerprint(draft)
+    });
   });
 });

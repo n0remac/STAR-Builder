@@ -5,14 +5,14 @@ import { redirect } from "next/navigation";
 
 import { starScore } from "@/features/ai";
 import type { StarDraft } from "@/features/ai/schemas";
+import { requireCurrentUserForAction } from "@/lib/current-user";
 import { prisma } from "@/lib/db";
-import { getDefaultUser } from "@/lib/default-user";
 import { formString } from "@/lib/form";
 import { normalizeTextareaText } from "@/lib/normalization";
 import {
-  getStarDraftFingerprint,
-  isStarScoreFreshForDraft,
-  safeStarCategory
+  freshStarScoreState,
+  safeStarCategory,
+  scoreStateForStarDraft
 } from "@/lib/star";
 import { generateStarFeedbackFields } from "@/lib/star-feedback";
 
@@ -27,33 +27,14 @@ function draftFromFormData(formData: FormData): StarDraft {
   };
 }
 
-function scoreStateFromFormData(formData: FormData) {
-  const rawScore = Number(formString(formData, "score"));
-  const score = Number.isInteger(rawScore) && rawScore >= 1 && rawScore <= 10
-    ? rawScore
-    : null;
-
-  return {
-    score,
-    scoreRationale: normalizeTextareaText(formString(formData, "scoreRationale")),
-    scoreIsStale: formString(formData, "scoreIsStale") === "true",
-    scoreDraftHash: formString(formData, "scoreDraftHash")
-  };
-}
-
 async function scoreDraft(draft: StarDraft) {
   const output = await starScore({ draft });
 
-  return {
-    score: output.score,
-    scoreRationale: output.rationale,
-    scoreIsStale: false,
-    scoreDraftHash: getStarDraftFingerprint(draft)
-  };
+  return freshStarScoreState(draft, output);
 }
 
 async function findUserAnswer(answerId: string) {
-  const user = await getDefaultUser();
+  const user = await requireCurrentUserForAction();
 
   return prisma.starResponse.findFirst({
     where: {
@@ -69,7 +50,6 @@ async function findUserAnswer(answerId: string) {
 export async function updateStarAnswerAction(formData: FormData) {
   const id = formString(formData, "id");
   const draft = draftFromFormData(formData);
-  const currentScore = scoreStateFromFormData(formData);
 
   if (!id || !draft.title.trim()) {
     throw new Error("STAR answer id and title are required.");
@@ -81,22 +61,13 @@ export async function updateStarAnswerAction(formData: FormData) {
     throw new Error("STAR answer not found.");
   }
 
-  const scoreMatchesDraft = isStarScoreFreshForDraft(draft, currentScore);
+  const scoreState = scoreStateForStarDraft(draft, answer);
 
   await prisma.starResponse.update({
     where: { id },
     data: {
       ...draft,
-      score: currentScore.score,
-      scoreRationale: currentScore.score === null ? "" : currentScore.scoreRationale,
-      scoreIsStale: currentScore.score === null ? false : !scoreMatchesDraft,
-      scoreDraftHash: currentScore.score === null ? null : currentScore.scoreDraftHash,
-      scoredAt:
-        currentScore.score === null
-          ? null
-          : scoreMatchesDraft
-            ? new Date()
-            : answer.scoredAt
+      ...scoreState
     }
   });
 
@@ -109,7 +80,6 @@ export async function updateStarAnswerAction(formData: FormData) {
 export async function requestStarFeedbackAction(formData: FormData) {
   const id = formString(formData, "id");
   const draft = draftFromFormData(formData);
-  const currentScore = scoreStateFromFormData(formData);
 
   if (!id || !draft.title.trim()) {
     throw new Error("STAR answer id and title are required.");
@@ -121,7 +91,7 @@ export async function requestStarFeedbackAction(formData: FormData) {
     throw new Error("STAR answer not found.");
   }
 
-  const scoreMatchesDraft = isStarScoreFreshForDraft(draft, currentScore);
+  const scoreState = scoreStateForStarDraft(draft, answer);
   const feedback = await generateStarFeedbackFields({
     draft,
     job: {
@@ -137,16 +107,7 @@ export async function requestStarFeedbackAction(formData: FormData) {
     data: {
       ...draft,
       ...feedback,
-      score: currentScore.score,
-      scoreRationale: currentScore.score === null ? "" : currentScore.scoreRationale,
-      scoreIsStale: currentScore.score === null ? false : !scoreMatchesDraft,
-      scoreDraftHash: currentScore.score === null ? null : currentScore.scoreDraftHash,
-      scoredAt:
-        currentScore.score === null
-          ? null
-          : scoreMatchesDraft
-            ? new Date()
-            : answer.scoredAt
+      ...scoreState
     }
   });
 
@@ -176,11 +137,7 @@ export async function regenerateStarScoreAction(formData: FormData) {
     where: { id },
     data: {
       ...draft,
-      score: score.score,
-      scoreRationale: score.scoreRationale,
-      scoredAt: new Date(),
-      scoreIsStale: false,
-      scoreDraftHash: score.scoreDraftHash
+      ...score
     }
   });
 

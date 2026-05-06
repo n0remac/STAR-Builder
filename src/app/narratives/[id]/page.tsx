@@ -2,11 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { NarrativeEditor } from "@/app/narratives/_components/narrative-editor";
+import { requireCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/db";
-import { getDefaultUser } from "@/lib/default-user";
 import {
   NARRATIVE_SCOPE_LABELS,
-  getNarrativeFingerprint,
   narrativeThemeLabel
 } from "@/lib/narrative";
 import { STAR_CATEGORY_LABELS } from "@/lib/star";
@@ -17,7 +16,7 @@ export default async function NarrativeDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const user = await getDefaultUser();
+  const user = await requireCurrentUser();
   const narrative = await prisma.narrative.findFirst({
     where: {
       id,
@@ -25,6 +24,7 @@ export default async function NarrativeDetailPage({
     },
     include: {
       position: true,
+      targetJob: true,
       sources: {
         include: {
           starResponse: {
@@ -51,7 +51,6 @@ export default async function NarrativeDetailPage({
     shortVersion: narrative.shortVersion,
     interviewGuidance: narrative.interviewGuidance
   };
-  const sourceIds = narrative.sources.map((source) => source.starResponseId);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_0.8fr]">
@@ -59,21 +58,12 @@ export default async function NarrativeDetailPage({
         id={narrative.id}
         scope={narrative.scope}
         theme={narrative.theme}
-        sourceIds={sourceIds}
         initialState={{
           draft,
           feedback: narrative.feedback,
           score: narrative.score,
           scoreRationale: narrative.scoreRationale,
-          scoreIsStale: narrative.scoreIsStale,
-          sourceHash:
-            narrative.sourceHash ??
-            getNarrativeFingerprint({
-              ...draft,
-              scope: narrative.scope,
-              theme: narrative.theme,
-              sourceIds
-            })
+          scoreIsStale: narrative.scoreIsStale
         }}
       />
 
@@ -99,6 +89,19 @@ export default async function NarrativeDetailPage({
               </p>
               <p className="mt-1 text-lg font-black">
                 {narrative.position.title}
+              </p>
+            </div>
+          ) : null}
+          {narrative.targetJob ? (
+            <div className="mt-5">
+              <p className="font-semibold text-moss">
+                {narrative.targetJob.company}
+              </p>
+              <p className="mt-1 text-lg font-black">
+                {narrative.targetJob.title}
+              </p>
+              <p className="mt-3 line-clamp-5 text-sm leading-6 text-ink/60">
+                {narrative.targetJob.description}
               </p>
             </div>
           ) : null}

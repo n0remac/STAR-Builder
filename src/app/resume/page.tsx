@@ -1,5 +1,9 @@
+import { requireCurrentUser } from "@/lib/current-user";
+
 import { ResumeIngestionForm } from "./resume-ingestion-form";
 
-export default function ResumePage() {
+export default async function ResumePage() {
+  await requireCurrentUser();
+
   return <ResumeIngestionForm />;
 }

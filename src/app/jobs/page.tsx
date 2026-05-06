@@ -1,8 +1,8 @@
 import Link from "next/link";
 
 import { createJobAction } from "@/app/jobs/actions";
+import { requireCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/db";
-import { getDefaultUser } from "@/lib/default-user";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,7 @@ function formatLatestUpdate(date: Date) {
 }
 
 export default async function JobsPage() {
-  const user = await getDefaultUser();
+  const user = await requireCurrentUser();
   const jobs = await prisma.position.findMany({
     where: {
       resume: {

@@ -23,6 +23,17 @@ pnpm dev
 
 The app works without `OPENAI_API_KEY`; AI tasks return deterministic mock responses. Add `OPENAI_API_KEY` to `.env` to use OpenAI server-side.
 
+Google sign-in uses Auth.js. Add `AUTH_SECRET`, `AUTH_GOOGLE_ID`, and
+`AUTH_GOOGLE_SECRET` to `.env`; the Google OAuth callback URL is
+`/api/auth/callback/google`.
+
+To move existing local data from `local@star.test` to the Google account you
+signed in with, run:
+
+```bash
+pnpm tsx scripts/claim-existing-data.ts your-google-email@example.com
+```
+
 ## Useful commands
 
 ```bash
@@ -35,6 +46,10 @@ pnpm prisma:studio
 ## Routes
 
 - `/resume`: paste resume text, extract positions and STAR answer drafts, save items.
+- `/profile`: shareable engineer profile with curated experiences, narratives, and resume link.
+- `/profile/edit`: local profile settings, curation, and generated summary controls.
+- `/profile/publish`: choose the public slug and selected public profile content.
+- `/u/[slug]`: public read-only profile for selected content.
 - `/jobs`: view and create job cards from resume positions or manual entries.
 - `/jobs/[id]`: review a job, add partial STAR answers, and use AI-directed prompts to create drafts.
 - `/answers/[id]`: edit a job-linked STAR response opened from a job detail page.

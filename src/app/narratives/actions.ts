@@ -12,11 +12,13 @@ import type {
   NarrativeThemeExtractionState
 } from "@/app/narratives/state";
 import {
-  normalizeNarrativeTheme,
+  resolveNarrativeTheme,
   safeNarrativeScope,
   validateNarrativeDraft,
   validateNarrativeGeneration,
-  validateNarrativeId
+  validateNarrativeId,
+  validateTargetJobNarrativeInput,
+  validateTargetJobSourceOwnership
 } from "@/app/narratives/validation";
 import {
   careerNarrative,
@@ -27,14 +29,15 @@ import {
 import type {
   JobContext,
   NarrativeDraft,
-  NarrativeInput
+  NarrativeInput,
+  TargetJobContext
 } from "@/features/ai/schemas";
+import { requireCurrentUserForAction } from "@/lib/current-user";
 import { prisma } from "@/lib/db";
-import { getDefaultUser } from "@/lib/default-user";
 import { formString } from "@/lib/form";
 import {
-  getNarrativeFingerprint,
-  isNarrativeScoreFresh
+  freshNarrativeScoreState,
+  scoreStateForNarrative
 } from "@/lib/narrative";
 import { normalizeTextareaText } from "@/lib/normalization";
 
@@ -69,6 +72,18 @@ function jobContext(job: {
   };
 }
 
+function targetJobContext(job: {
+  title: string;
+  company: string;
+  description: string;
+}): TargetJobContext {
+  return {
+    title: job.title,
+    company: job.company,
+    description: job.description
+  };
+}
+
 function draftFromFormData(formData: FormData): NarrativeDraft {
   return {
     title: formString(formData, "title"),
@@ -83,69 +98,32 @@ function draftFromFormData(formData: FormData): NarrativeDraft {
   };
 }
 
-function scoreStateFromFormData(formData: FormData) {
-  const rawScore = Number(formString(formData, "score"));
-  const score =
-    Number.isInteger(rawScore) && rawScore >= 1 && rawScore <= 10
-      ? rawScore
-      : null;
-
-  return {
-    score,
-    scoreRationale: normalizeTextareaText(formString(formData, "scoreRationale")),
-    sourceHash: formString(formData, "sourceHash")
-  };
-}
-
-function sourceIdsFromFormData(formData: FormData) {
-  return formData
-    .getAll("sourceIds")
-    .map((value) => (typeof value === "string" ? value : ""))
-    .filter(Boolean);
-}
-
-function fingerprint({
-  draft,
-  scope,
-  sourceIds,
-  theme
-}: {
-  draft: NarrativeDraft;
-  scope: NarrativeScope;
-  sourceIds: string[];
-  theme: string;
-}) {
-  return getNarrativeFingerprint({
-    ...draft,
-    scope,
-    sourceIds,
-    theme
-  });
-}
-
 function narrativeScoreInput({
   draft,
   scope,
+  targetJob,
   theme
 }: {
   draft: NarrativeDraft;
   scope: NarrativeScope;
+  targetJob?: TargetJobContext;
   theme: string;
 }) {
   return {
     draft,
     scope,
+    targetJob,
     theme
   };
 }
 
 function themeFromFormData(formData: FormData) {
-  return normalizeNarrativeTheme(
-    formString(formData, "manualTheme") ||
-      formString(formData, "theme") ||
-      formString(formData, "presetTheme"),
-    "impact"
-  );
+  return resolveNarrativeTheme({
+    manualTheme: formString(formData, "manualTheme"),
+    theme: formString(formData, "theme"),
+    presetTheme: formString(formData, "presetTheme"),
+    fallback: "impact"
+  });
 }
 
 function groupSourcesForAi({
@@ -211,7 +189,7 @@ async function findSources({
   positionId: string;
   scope: NarrativeScope;
 }) {
-  const user = await getDefaultUser();
+  const user = await requireCurrentUserForAction();
 
   if (scope === "job") {
     const job = await prisma.position.findFirst({
@@ -265,8 +243,39 @@ async function findSources({
   };
 }
 
+async function findSelectedTargetSources(sourceIds: string[]) {
+  const user = await requireCurrentUserForAction();
+  const uniqueSourceIds = Array.from(new Set(sourceIds));
+  const sources = await prisma.starResponse.findMany({
+    where: {
+      id: {
+        in: uniqueSourceIds
+      },
+      userId: user.id
+    },
+    include: {
+      position: true
+    }
+  });
+  const sourceById = new Map(sources.map((source) => [source.id, source]));
+  const ownershipError = validateTargetJobSourceOwnership({
+    requestedSourceIds: uniqueSourceIds,
+    foundSourceIds: sources.map((source) => source.id)
+  });
+
+  if (ownershipError) {
+    throw new Error(ownershipError);
+  }
+
+  return {
+    user,
+    sourceIds: uniqueSourceIds,
+    sources: uniqueSourceIds.map((sourceId) => sourceById.get(sourceId)!)
+  };
+}
+
 async function findUserNarrative(narrativeId: string) {
-  const user = await getDefaultUser();
+  const user = await requireCurrentUserForAction();
 
   return prisma.narrative.findFirst({
     where: {
@@ -286,7 +295,8 @@ async function findUserNarrative(narrativeId: string) {
           starResponseId: "asc"
         }
       },
-      position: true
+      position: true,
+      targetJob: true
     }
   });
 }
@@ -340,7 +350,15 @@ export async function generateNarrativeAction(
     const score = await careerNarrativeScore(
       narrativeScoreInput({ draft, scope, theme })
     );
-    const sourceHash = fingerprint({ draft, scope, sourceIds, theme });
+    const scoreState = freshNarrativeScoreState(
+      {
+        ...draft,
+        scope,
+        sourceIds,
+        theme
+      },
+      score
+    );
     const narrative = await prisma.narrative.create({
       data: {
         userId: sourceSet.user.id,
@@ -348,11 +366,7 @@ export async function generateNarrativeAction(
         scope,
         theme,
         ...draft,
-        score: score.score,
-        scoreRationale: score.rationale,
-        scoredAt: new Date(),
-        scoreIsStale: false,
-        sourceHash,
+        ...scoreState,
         sources: {
           create: sourceIds.map((sourceId) => ({
             starResponseId: sourceId,
@@ -370,6 +384,118 @@ export async function generateNarrativeAction(
         error instanceof Error
           ? error.message
           : "Could not generate narrative."
+    };
+  }
+
+  redirect(`/narratives/${narrativeId}`);
+}
+
+export async function generateTargetJobNarrativeAction(
+  _previousState: NarrativeGenerationState,
+  formData: FormData
+): Promise<NarrativeGenerationState> {
+  const title = formString(formData, "targetTitle");
+  const company = formString(formData, "targetCompany");
+  const description = normalizeTextareaText(
+    formString(formData, "targetDescription")
+  );
+  const theme = themeFromFormData(formData);
+  const sourceIds = formData
+    .getAll("sourceIds")
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .filter(Boolean);
+  const validationError = validateTargetJobNarrativeInput({
+    title,
+    company,
+    description,
+    theme,
+    sourceIds
+  });
+  let narrativeId = "";
+
+  if (validationError) {
+    return { error: validationError };
+  }
+
+  try {
+    const sourceSet = await findSelectedTargetSources(sourceIds);
+    const targetJob = targetJobContext({
+      title,
+      company,
+      description
+    });
+    const input: NarrativeInput = {
+      scope: "target_job",
+      theme,
+      targetJob,
+      jobs: groupSourcesForAi({
+        scope: "target_job",
+        sources: sourceSet.sources
+      })
+    };
+    const generated = await careerNarrative(input);
+    const citedIds = new Set(generated.citedSourceIds);
+    const draft = {
+      title: generated.title,
+      positioning: generated.positioning,
+      fullNarrative: generated.fullNarrative,
+      shortVersion: generated.shortVersion,
+      interviewGuidance: generated.interviewGuidance
+    };
+    const score = await careerNarrativeScore(
+      narrativeScoreInput({
+        draft,
+        scope: "target_job",
+        targetJob,
+        theme
+      })
+    );
+    const scoreState = freshNarrativeScoreState(
+      {
+        ...draft,
+        scope: "target_job",
+        sourceIds: sourceSet.sourceIds,
+        targetJob,
+        theme
+      },
+      score
+    );
+    const narrative = await prisma.$transaction(async (tx) => {
+      const savedTargetJob = await tx.targetJob.create({
+        data: {
+          userId: sourceSet.user.id,
+          title,
+          company,
+          description
+        }
+      });
+
+      return tx.narrative.create({
+        data: {
+          userId: sourceSet.user.id,
+          targetJobId: savedTargetJob.id,
+          scope: "target_job",
+          theme,
+          ...draft,
+          ...scoreState,
+          sources: {
+            create: sourceSet.sourceIds.map((sourceId) => ({
+              starResponseId: sourceId,
+              roleInNarrative: citedIds.has(sourceId) ? "Cited" : "Source"
+            }))
+          }
+        }
+      });
+    });
+
+    revalidatePath("/narratives");
+    narrativeId = narrative.id;
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Could not generate target job narrative."
     };
   }
 
@@ -427,11 +553,7 @@ export async function extractNarrativeThemesAction(
 
 export async function updateNarrativeAction(formData: FormData) {
   const id = formString(formData, "id");
-  const scope = safeNarrativeScope(formString(formData, "scope", "career"));
-  const theme = themeFromFormData(formData);
   const draft = draftFromFormData(formData);
-  const sourceIds = sourceIdsFromFormData(formData);
-  const currentScore = scoreStateFromFormData(formData);
   const idError = validateNarrativeId(id);
   const draftError = validateNarrativeDraft(draft);
 
@@ -445,31 +567,26 @@ export async function updateNarrativeAction(formData: FormData) {
     throw new Error("Narrative not found.");
   }
 
-  const scoreMatchesDraft = isNarrativeScoreFresh(
+  const sourceIds = narrative.sources.map((source) => source.starResponseId);
+  const targetJob = narrative.targetJob
+    ? targetJobContext(narrative.targetJob)
+    : undefined;
+  const scoreState = scoreStateForNarrative(
     {
       ...draft,
-      scope,
+      scope: narrative.scope,
       sourceIds,
-      theme
+      targetJob,
+      theme: narrative.theme
     },
-    currentScore
+    narrative
   );
 
   await prisma.narrative.update({
     where: { id },
     data: {
       ...draft,
-      score: currentScore.score,
-      scoreRationale:
-        currentScore.score === null ? "" : currentScore.scoreRationale,
-      scoreIsStale: currentScore.score === null ? false : !scoreMatchesDraft,
-      sourceHash: currentScore.score === null ? null : currentScore.sourceHash,
-      scoredAt:
-        currentScore.score === null
-          ? null
-          : scoreMatchesDraft
-            ? new Date()
-            : narrative.scoredAt
+      ...scoreState
     }
   });
 
@@ -480,10 +597,7 @@ export async function updateNarrativeAction(formData: FormData) {
 
 export async function regenerateNarrativeScoreAction(formData: FormData) {
   const id = formString(formData, "id");
-  const scope = safeNarrativeScope(formString(formData, "scope", "career"));
-  const theme = themeFromFormData(formData);
   const draft = draftFromFormData(formData);
-  const sourceIds = sourceIdsFromFormData(formData);
   const idError = validateNarrativeId(id);
   const draftError = validateNarrativeDraft(draft);
 
@@ -497,19 +611,31 @@ export async function regenerateNarrativeScoreAction(formData: FormData) {
     throw new Error("Narrative not found.");
   }
 
+  const sourceIds = narrative.sources.map((source) => source.starResponseId);
+  const targetJob = narrative.targetJob
+    ? targetJobContext(narrative.targetJob)
+    : undefined;
+  const snapshot = {
+    ...draft,
+    scope: narrative.scope,
+    sourceIds,
+    targetJob,
+    theme: narrative.theme
+  };
   const score = await careerNarrativeScore(
-    narrativeScoreInput({ draft, scope, theme })
+    narrativeScoreInput({
+      draft,
+      scope: narrative.scope,
+      targetJob,
+      theme: narrative.theme
+    })
   );
 
   await prisma.narrative.update({
     where: { id },
     data: {
       ...draft,
-      score: score.score,
-      scoreRationale: score.rationale,
-      scoredAt: new Date(),
-      scoreIsStale: false,
-      sourceHash: fingerprint({ draft, scope, sourceIds, theme })
+      ...freshNarrativeScoreState(snapshot, score)
     }
   });
 
@@ -520,11 +646,7 @@ export async function regenerateNarrativeScoreAction(formData: FormData) {
 
 export async function requestNarrativeFeedbackAction(formData: FormData) {
   const id = formString(formData, "id");
-  const scope = safeNarrativeScope(formString(formData, "scope", "career"));
-  const theme = themeFromFormData(formData);
   const draft = draftFromFormData(formData);
-  const sourceIds = sourceIdsFromFormData(formData);
-  const currentScore = scoreStateFromFormData(formData);
   const idError = validateNarrativeId(id);
   const draftError = validateNarrativeDraft(draft);
 
@@ -538,19 +660,25 @@ export async function requestNarrativeFeedbackAction(formData: FormData) {
     throw new Error("Narrative not found.");
   }
 
-  const scoreMatchesDraft = isNarrativeScoreFresh(
+  const sourceIds = narrative.sources.map((source) => source.starResponseId);
+  const targetJob = narrative.targetJob
+    ? targetJobContext(narrative.targetJob)
+    : undefined;
+  const scoreState = scoreStateForNarrative(
     {
       ...draft,
-      scope,
+      scope: narrative.scope,
       sourceIds,
-      theme
+      targetJob,
+      theme: narrative.theme
     },
-    currentScore
+    narrative
   );
   const feedback = await careerNarrativeFeedback({
     draft,
-    scope,
-    theme
+    scope: narrative.scope,
+    targetJob,
+    theme: narrative.theme
   });
 
   await prisma.narrative.update({
@@ -558,17 +686,7 @@ export async function requestNarrativeFeedbackAction(formData: FormData) {
     data: {
       ...draft,
       feedback: feedback.feedback,
-      score: currentScore.score,
-      scoreRationale:
-        currentScore.score === null ? "" : currentScore.scoreRationale,
-      scoreIsStale: currentScore.score === null ? false : !scoreMatchesDraft,
-      sourceHash: currentScore.score === null ? null : currentScore.sourceHash,
-      scoredAt:
-        currentScore.score === null
-          ? null
-          : scoreMatchesDraft
-            ? new Date()
-            : narrative.scoredAt
+      ...scoreState
     }
   });
 

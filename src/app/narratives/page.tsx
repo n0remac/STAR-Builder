@@ -1,8 +1,8 @@
 import Link from "next/link";
 
 import { NarrativeGenerationPanel } from "@/app/narratives/_components/narrative-generation-panel";
+import { requireCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/db";
-import { getDefaultUser } from "@/lib/default-user";
 import {
   NARRATIVE_SCOPE_LABELS,
   getNarrativeScoreLabel,
@@ -20,7 +20,7 @@ function formatDate(date: Date) {
 }
 
 export default async function NarrativesPage() {
-  const user = await getDefaultUser();
+  const user = await requireCurrentUser();
   const [jobs, narratives] = await Promise.all([
     prisma.position.findMany({
       where: {
@@ -29,6 +29,18 @@ export default async function NarrativesPage() {
         }
       },
       include: {
+        starResponses: {
+          orderBy: {
+            updatedAt: "desc"
+          },
+          select: {
+            id: true,
+            category: true,
+            title: true,
+            result: true,
+            situation: true
+          }
+        },
         _count: {
           select: {
             starResponses: true
@@ -47,6 +59,7 @@ export default async function NarrativesPage() {
       },
       include: {
         position: true,
+        targetJob: true,
         _count: {
           select: {
             sources: true
@@ -64,9 +77,13 @@ export default async function NarrativesPage() {
   const jobNarratives = narratives.filter(
     (narrative) => narrative.scope === "job"
   );
+  const targetJobNarratives = narratives.filter(
+    (narrative) => narrative.scope === "target_job"
+  );
   const narrativeSections = [
     { label: "Career-wide", narratives: careerNarratives },
-    { label: "Per-job", narratives: jobNarratives }
+    { label: "Per-job", narratives: jobNarratives },
+    { label: "Target job", narratives: targetJobNarratives }
   ];
 
   return (
@@ -77,6 +94,12 @@ export default async function NarrativesPage() {
           title: job.title,
           company: job.company,
           starCount: job._count.starResponses
+        }))}
+        sourceGroups={jobs.map((job) => ({
+          id: job.id,
+          title: job.title,
+          company: job.company,
+          answers: job.starResponses
         }))}
       />
 
@@ -133,6 +156,12 @@ export default async function NarrativesPage() {
                               <p className="mt-1 text-sm font-semibold text-moss">
                                 {narrative.position.title} at{" "}
                                 {narrative.position.company}
+                              </p>
+                            ) : null}
+                            {narrative.targetJob ? (
+                              <p className="mt-1 text-sm font-semibold text-moss">
+                                Targeting {narrative.targetJob.title} at{" "}
+                                {narrative.targetJob.company}
                               </p>
                             ) : null}
                             <p className="mt-3 line-clamp-2 text-sm leading-6 text-ink/65">

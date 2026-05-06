@@ -2,9 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { StarAnswerEditor } from "@/app/answers/_components/star-answer-editor";
+import { requireCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/db";
-import { getDefaultUser } from "@/lib/default-user";
-import { getStarDraftFingerprint } from "@/lib/star";
 
 export default async function AnswerDetailPage({
   params
@@ -12,7 +11,7 @@ export default async function AnswerDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const user = await getDefaultUser();
+  const user = await requireCurrentUser();
   const answer = await prisma.starResponse.findFirst({
     where: {
       id,
@@ -51,9 +50,7 @@ export default async function AnswerDetailPage({
           feedback,
           score: answer.score,
           scoreRationale: answer.scoreRationale,
-          scoreIsStale: answer.scoreIsStale,
-          scoreDraftHash:
-            answer.scoreDraftHash ?? getStarDraftFingerprint(draft)
+          scoreIsStale: answer.scoreIsStale
         }}
       />
 
