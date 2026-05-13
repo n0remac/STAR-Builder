@@ -1,6 +1,5 @@
-import Link from "next/link";
-
 import { createJobAction } from "@/app/jobs/actions";
+import { Badge, Button, CardLink, EmptyState, Panel } from "@/components/ui";
 import { requireCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/db";
 
@@ -50,7 +49,7 @@ export default async function JobsPage() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[0.75fr_1.25fr]">
-      <aside className="card h-fit space-y-5">
+      <Panel as="aside" className="h-fit space-y-5">
         <div>
           <p className="label">Manual job</p>
           <h1 className="mt-3 text-4xl font-black">Add a job.</h1>
@@ -89,25 +88,25 @@ export default async function JobsPage() {
               <input name="end" className="field" placeholder="Present" />
             </label>
           </div>
-          <button type="submit" className="button">
+          <Button type="submit">
             Create job
-          </button>
+          </Button>
         </form>
-      </aside>
+      </Panel>
 
-      <section className="card">
+      <Panel>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="label">Jobs</p>
             <h2 className="mt-3 text-4xl font-black">Role library.</h2>
           </div>
-          <span className="pill">{jobs.length} total</span>
+          <Badge>{jobs.length} total</Badge>
         </div>
 
         {jobs.length === 0 ? (
-          <div className="mt-8 rounded-[1.5rem] border border-dashed border-ink/20 p-8 text-center text-ink/55">
+          <EmptyState>
             No jobs yet. Paste a resume or add a job manually.
-          </div>
+          </EmptyState>
         ) : (
           <div className="mt-6 grid gap-4">
             {jobs.map((job) => {
@@ -133,10 +132,9 @@ export default async function JobsPage() {
               );
 
               return (
-                <Link
+                <CardLink
                   key={job.id}
                   href={`/jobs/${job.id}`}
-                  className="group rounded-[1.5rem] border border-ink/10 bg-paper/70 p-5 transition hover:-translate-y-0.5 hover:border-moss/40 hover:bg-white/80"
                 >
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
@@ -152,28 +150,28 @@ export default async function JobsPage() {
                   </div>
 
                   <div className="mt-5 flex flex-wrap gap-2">
-                    <span className="pill">
+                    <Badge>
                       {job.starResponses.length} STAR answer
                       {job.starResponses.length === 1 ? "" : "s"}
-                    </span>
-                    <span className="pill">
+                    </Badge>
+                    <Badge>
                       {averageScore === null
                         ? "Unscored"
                         : `Avg score ${averageScore}/10`}
-                    </span>
+                    </Badge>
                     {staleCount > 0 ? (
-                      <span className="pill">{staleCount} stale</span>
+                      <Badge>{staleCount} stale</Badge>
                     ) : null}
-                    <span className="pill">
+                    <Badge>
                       Updated {formatLatestUpdate(latestUpdate)}
-                    </span>
+                    </Badge>
                   </div>
-                </Link>
+                </CardLink>
               );
             })}
           </div>
         )}
-      </section>
+      </Panel>
     </div>
   );
 }

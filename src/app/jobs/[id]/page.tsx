@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { createJobStarAction } from "@/app/jobs/actions";
 import { JobAiPanel } from "@/app/jobs/_components/job-ai-panel";
+import { Badge, Button, CardLink, EmptyState, Panel } from "@/components/ui";
 import { requireCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/db";
 import {
@@ -60,7 +60,7 @@ export default async function JobDetailPage({
 
   return (
     <div className="space-y-6">
-      <section className="card">
+      <Panel>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="label">Job detail</p>
@@ -73,51 +73,50 @@ export default async function JobDetailPage({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <span className="pill">
+            <Badge>
               {job.starResponses.length} STAR answer
               {job.starResponses.length === 1 ? "" : "s"}
-            </span>
-            <span className="pill">
+            </Badge>
+            <Badge>
               {averageScore === null
                 ? "Unscored"
                 : `Avg score ${averageScore}/10`}
-            </span>
+            </Badge>
             {staleCount > 0 ? (
-              <span className="pill">{staleCount} stale</span>
+              <Badge>{staleCount} stale</Badge>
             ) : null}
           </div>
         </div>
-      </section>
+      </Panel>
 
       <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="card">
+        <Panel>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="label">STAR answers</p>
               <h2 className="mt-3 text-3xl font-black">Saved for this job.</h2>
             </div>
-            <span className="pill">{job.starResponses.length} total</span>
+            <Badge>{job.starResponses.length} total</Badge>
           </div>
 
           {job.starResponses.length === 0 ? (
-            <div className="mt-8 rounded-[1.5rem] border border-dashed border-ink/20 p-8 text-center text-ink/55">
+            <EmptyState>
               No STAR answers for this job yet.
-            </div>
+            </EmptyState>
           ) : (
             <div className="mt-6 grid gap-4">
               {job.starResponses.map((answer) => (
-                <Link
+                <CardLink
                   key={answer.id}
                   href={`/answers/${answer.id}`}
-                  className="group rounded-[1.5rem] border border-ink/10 bg-paper/70 p-5 transition hover:-translate-y-0.5 hover:border-moss/40 hover:bg-white/80"
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <div className="flex flex-wrap gap-2">
-                        <span className="pill">
+                        <Badge>
                           {STAR_CATEGORY_LABELS[answer.category]}
-                        </span>
-                        <span className="pill">{getStarScoreLabel(answer)}</span>
+                        </Badge>
+                        <Badge>{getStarScoreLabel(answer)}</Badge>
                       </div>
                       <h3 className="mt-3 text-2xl font-black group-hover:text-moss">
                         {answer.title}
@@ -128,14 +127,14 @@ export default async function JobDetailPage({
                     </div>
                     <span className="text-sm font-bold text-moss">Edit</span>
                   </div>
-                </Link>
+                </CardLink>
               ))}
             </div>
           )}
-        </section>
+        </Panel>
 
         <div className="space-y-6">
-          <section className="card space-y-5">
+          <Panel className="space-y-5">
             <div>
               <p className="label">Manual STAR answer</p>
               <h2 className="mt-3 text-3xl font-black">Add a draft.</h2>
@@ -181,11 +180,11 @@ export default async function JobDetailPage({
                   />
                 </label>
               ))}
-              <button type="submit" className="button">
+              <Button type="submit">
                 Create STAR answer
-              </button>
+              </Button>
             </form>
-          </section>
+          </Panel>
 
           <JobAiPanel jobId={job.id} />
         </div>

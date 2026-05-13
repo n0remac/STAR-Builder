@@ -1,6 +1,5 @@
-import Link from "next/link";
-
 import { NarrativeGenerationPanel } from "@/app/narratives/_components/narrative-generation-panel";
+import { Badge, CardLink, EmptyState, Panel } from "@/components/ui";
 import { requireCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/db";
 import {
@@ -103,51 +102,50 @@ export default async function NarrativesPage() {
         }))}
       />
 
-      <section className="card">
+      <Panel>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="label">Saved narratives</p>
             <h2 className="mt-3 text-4xl font-black">Narrative library.</h2>
           </div>
-          <span className="pill">{narratives.length} total</span>
+          <Badge>{narratives.length} total</Badge>
         </div>
 
         {narratives.length === 0 ? (
-          <div className="mt-8 rounded-[1.5rem] border border-dashed border-ink/20 p-8 text-center text-ink/55">
+          <EmptyState>
             No narratives yet. Generate one from your saved STAR answers.
-          </div>
+          </EmptyState>
         ) : (
           <div className="mt-6 space-y-6">
             {narrativeSections.map((section) => (
               <div key={section.label}>
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="text-xl font-black">{section.label}</h3>
-                  <span className="pill">{section.narratives.length}</span>
+                  <Badge>{section.narratives.length}</Badge>
                 </div>
                 <div className="mt-3 grid gap-4">
                   {section.narratives.length === 0 ? (
-                    <div className="rounded-[1.5rem] border border-dashed border-ink/15 p-5 text-sm text-ink/55">
+                    <EmptyState size="compact">
                       None saved.
-                    </div>
+                    </EmptyState>
                   ) : (
                     section.narratives.map((narrative) => (
-                      <Link
+                      <CardLink
                         key={narrative.id}
                         href={`/narratives/${narrative.id}`}
-                        className="group rounded-[1.5rem] border border-ink/10 bg-paper/70 p-5 transition hover:-translate-y-0.5 hover:border-moss/40 hover:bg-white/80"
                       >
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                           <div>
                             <div className="flex flex-wrap gap-2">
-                              <span className="pill">
+                              <Badge>
                                 {NARRATIVE_SCOPE_LABELS[narrative.scope]}
-                              </span>
-                              <span className="pill">
+                              </Badge>
+                              <Badge>
                                 {narrativeThemeLabel(narrative.theme)}
-                              </span>
-                              <span className="pill">
+                              </Badge>
+                              <Badge>
                                 {getNarrativeScoreLabel(narrative)}
-                              </span>
+                              </Badge>
                             </div>
                             <h4 className="mt-3 text-2xl font-black group-hover:text-moss">
                               {narrative.title}
@@ -173,15 +171,15 @@ export default async function NarrativesPage() {
                           </div>
                         </div>
                         <div className="mt-4 flex flex-wrap gap-2">
-                          <span className="pill">
+                          <Badge>
                             {narrative._count.sources} source
                             {narrative._count.sources === 1 ? "" : "s"}
-                          </span>
-                          <span className="pill">
+                          </Badge>
+                          <Badge>
                             Updated {formatDate(narrative.updatedAt)}
-                          </span>
+                          </Badge>
                         </div>
-                      </Link>
+                      </CardLink>
                     ))
                   )}
                 </div>
@@ -189,7 +187,7 @@ export default async function NarrativesPage() {
             ))}
           </div>
         )}
-      </section>
+      </Panel>
     </div>
   );
 }

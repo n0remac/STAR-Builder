@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { NarrativeEditor } from "@/app/narratives/_components/narrative-editor";
+import { Badge, ButtonLink, CardLink, Panel } from "@/components/ui";
 import { requireCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/db";
 import {
@@ -68,19 +68,19 @@ export default async function NarrativeDetailPage({
       />
 
       <aside className="space-y-6">
-        <section className="card h-fit">
+        <Panel className="h-fit">
           <p className="label">Narrative context</p>
           <h2 className="mt-3 text-3xl font-black">
             {NARRATIVE_SCOPE_LABELS[narrative.scope]}
           </h2>
           <div className="mt-3 flex flex-wrap gap-2">
-            <span className="pill">
+            <Badge>
               {narrativeThemeLabel(narrative.theme)}
-            </span>
-            <span className="pill">
+            </Badge>
+            <Badge>
               {narrative.sources.length} source
               {narrative.sources.length === 1 ? "" : "s"}
-            </span>
+            </Badge>
           </div>
           {narrative.position ? (
             <div className="mt-5">
@@ -105,25 +105,29 @@ export default async function NarrativeDetailPage({
               </p>
             </div>
           ) : null}
-          <Link href="/narratives" className="button-secondary mt-6">
+          <ButtonLink
+            href="/narratives"
+            variant="secondary"
+            className="mt-6"
+          >
             Back to narratives
-          </Link>
-        </section>
+          </ButtonLink>
+        </Panel>
 
-        <section className="card">
+        <Panel>
           <p className="label">Source STAR answers</p>
           <div className="mt-4 grid gap-3">
             {narrative.sources.map((source) => (
-              <Link
+              <CardLink
                 key={source.id}
                 href={`/answers/${source.starResponseId}`}
-                className="rounded-[1.5rem] border border-ink/10 bg-paper/70 p-4 transition hover:border-moss/40 hover:bg-white/80"
+                variant="plain"
               >
                 <div className="flex flex-wrap gap-2">
-                  <span className="pill">
+                  <Badge>
                     {STAR_CATEGORY_LABELS[source.starResponse.category]}
-                  </span>
-                  <span className="pill">{source.roleInNarrative}</span>
+                  </Badge>
+                  <Badge>{source.roleInNarrative}</Badge>
                 </div>
                 <h3 className="mt-3 font-black">
                   {source.starResponse.title}
@@ -137,10 +141,10 @@ export default async function NarrativeDetailPage({
                     source.starResponse.situation ||
                     "No detail captured yet."}
                 </p>
-              </Link>
+              </CardLink>
             ))}
           </div>
-        </section>
+        </Panel>
       </aside>
     </div>
   );

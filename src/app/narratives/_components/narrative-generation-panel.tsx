@@ -11,6 +11,7 @@ import {
   initialNarrativeGenerationState,
   initialNarrativeThemeExtractionState
 } from "@/app/narratives/state";
+import { Button, EmptyState, Panel } from "@/components/ui";
 import {
   NARRATIVE_THEME_LABELS,
   NARRATIVE_THEMES
@@ -59,7 +60,7 @@ export function NarrativeGenerationPanel({
   );
 
   return (
-    <section className="card space-y-5">
+    <Panel className="space-y-5">
       <div>
         <p className="label">Narrative engine</p>
         <h1 className="mt-3 text-4xl font-black">Generate a narrative.</h1>
@@ -147,9 +148,9 @@ export function NarrativeGenerationPanel({
         <fieldset className="space-y-3">
           <legend className="label">STAR answer sources</legend>
           {sourceGroups.every((group) => group.answers.length === 0) ? (
-            <div className="rounded-2xl border border-dashed border-ink/15 p-5 text-sm text-ink/55">
+            <EmptyState size="compact" className="rounded-2xl">
               Add STAR answers before generating a job-fit narrative.
-            </div>
+            </EmptyState>
           ) : (
             <div className="max-h-[28rem] space-y-4 overflow-y-auto pr-1">
               {sourceGroups.map((group) =>
@@ -193,9 +194,9 @@ export function NarrativeGenerationPanel({
           )}
         </fieldset>
 
-        <button type="submit" className="button" disabled={isTargetPending}>
+        <Button type="submit" disabled={isTargetPending}>
           {isTargetPending ? "Generating..." : "Generate job-fit narrative"}
-        </button>
+        </Button>
       </form>
 
       <div className="rounded-[1.5rem] border border-ink/10 bg-paper/70 p-4">
@@ -203,13 +204,13 @@ export function NarrativeGenerationPanel({
         <div className="mt-4 grid gap-4">
           <form action={themeFormAction} className="space-y-3">
             <input type="hidden" name="scope" value="career" />
-            <button
+            <Button
               type="submit"
-              className="button-secondary"
+              variant="secondary"
               disabled={isThemePending}
             >
               {isThemePending ? "Extracting..." : "Extract career themes"}
-            </button>
+            </Button>
           </form>
 
           <form action={themeFormAction} className="space-y-3">
@@ -225,13 +226,13 @@ export function NarrativeGenerationPanel({
                 ))}
               </select>
             </label>
-            <button
+            <Button
               type="submit"
-              className="button-secondary"
+              variant="secondary"
               disabled={isThemePending}
             >
               {isThemePending ? "Extracting..." : "Extract job themes"}
-            </button>
+            </Button>
           </form>
         </div>
 
@@ -271,13 +272,14 @@ export function NarrativeGenerationPanel({
                       value={themeState.positionId ?? ""}
                     />
                     <input type="hidden" name="theme" value={theme.theme} />
-                    <button
+                    <Button
                       type="submit"
-                      className="button-secondary whitespace-nowrap"
+                      variant="secondary"
+                      className="whitespace-nowrap"
                       disabled={isPending}
                     >
                       Generate
-                    </button>
+                    </Button>
                   </form>
                 </div>
               </div>
@@ -350,12 +352,12 @@ export function NarrativeGenerationPanel({
             }
           />
         </label>
-        <button type="submit" className="button" disabled={isPending}>
+        <Button type="submit" disabled={isPending}>
           {isPending
             ? "Generating..."
             : `Generate ${generationScope === "career" ? "career" : "job"} narrative`}
-        </button>
+        </Button>
       </form>
-    </section>
+    </Panel>
   );
 }

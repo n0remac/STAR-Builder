@@ -9,6 +9,7 @@ import {
   requestNarrativeFeedbackAction,
   updateNarrativeAction
 } from "@/app/narratives/actions";
+import { Badge, Button, Panel } from "@/components/ui";
 import {
   NARRATIVE_SCOPE_LABELS,
   getNarrativeScoreLabel,
@@ -38,24 +39,24 @@ type NarrativeEditorProps = {
 
 function SubmitButton({
   children,
-  className,
-  formAction
+  formAction,
+  variant = "primary"
 }: {
   children: ReactNode;
-  className: string;
   formAction: (formData: FormData) => void | Promise<void>;
+  variant?: "primary" | "secondary";
 }) {
   const { pending } = useFormStatus();
 
   return (
-    <button
+    <Button
       type="submit"
-      className={className}
+      variant={variant}
       formAction={formAction}
       disabled={pending}
     >
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -68,7 +69,7 @@ export function NarrativeEditor({
   const state = initialState;
 
   return (
-    <section className="card">
+    <Panel>
       <form action={updateNarrativeAction} className="space-y-5">
         <input type="hidden" name="id" value={id} />
 
@@ -79,9 +80,9 @@ export function NarrativeEditor({
               {state.draft.title}
             </h1>
             <div className="mt-3 flex flex-wrap gap-2">
-              <span className="pill">{NARRATIVE_SCOPE_LABELS[scope]}</span>
-              <span className="pill">{narrativeThemeLabel(theme)}</span>
-              <span className="pill">{getNarrativeScoreLabel(state)}</span>
+              <Badge>{NARRATIVE_SCOPE_LABELS[scope]}</Badge>
+              <Badge>{narrativeThemeLabel(theme)}</Badge>
+              <Badge>{getNarrativeScoreLabel(state)}</Badge>
             </div>
             {state.scoreRationale ? (
               <p className="mt-3 max-w-2xl text-sm leading-6 text-ink/65">
@@ -90,8 +91,8 @@ export function NarrativeEditor({
             ) : null}
           </div>
           <SubmitButton
-            className="button-secondary"
             formAction={requestNarrativeFeedbackAction}
+            variant="secondary"
           >
             Request Feedback
           </SubmitButton>
@@ -154,17 +155,17 @@ export function NarrativeEditor({
         </label>
 
         <div className="flex flex-wrap gap-2">
-          <SubmitButton className="button" formAction={updateNarrativeAction}>
+          <SubmitButton formAction={updateNarrativeAction}>
             Save narrative
           </SubmitButton>
           <SubmitButton
-            className="button-secondary"
             formAction={regenerateNarrativeScoreAction}
+            variant="secondary"
           >
             Regenerate score
           </SubmitButton>
         </div>
       </form>
-    </section>
+    </Panel>
   );
 }

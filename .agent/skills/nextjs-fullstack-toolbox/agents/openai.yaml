@@ -1,0 +1,4 @@
+interface:
+  display_name: "Next.js Full-Stack Toolbox"
+  short_description: "Next.js architecture and boundary rules."
+  default_prompt: "Use the Next.js Full-Stack Toolbox to plan or implement this Next.js change according to my architecture conventions."

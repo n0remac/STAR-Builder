@@ -7,6 +7,7 @@ import {
   generateJobQuestionsAction
 } from "@/app/jobs/actions";
 import { initialJobQuestionsState } from "@/app/jobs/state";
+import { Badge, Button, Panel } from "@/components/ui";
 
 export function JobAiPanel({ jobId }: { jobId: string }) {
   const [state, formAction, isPending] = useActionState(
@@ -15,7 +16,7 @@ export function JobAiPanel({ jobId }: { jobId: string }) {
   );
 
   return (
-    <section className="card space-y-5">
+    <Panel className="space-y-5">
       <div>
         <p className="label">AI workflow</p>
         <h2 className="mt-3 text-3xl font-black">Find more stories.</h2>
@@ -27,9 +28,9 @@ export function JobAiPanel({ jobId }: { jobId: string }) {
 
       <form action={formAction}>
         <input type="hidden" name="jobId" value={jobId} />
-        <button type="submit" className="button" disabled={isPending}>
+        <Button type="submit" disabled={isPending}>
           {isPending ? "Generating..." : "Generate directed questions"}
-        </button>
+        </Button>
       </form>
 
       {state.error ? (
@@ -53,7 +54,7 @@ export function JobAiPanel({ jobId }: { jobId: string }) {
                 key={`${question.question}-${index}`}
                 className="block rounded-[1.5rem] border border-ink/10 bg-paper/75 p-4"
               >
-                <span className="pill">{question.focus || "Story"}</span>
+                <Badge>{question.focus || "Story"}</Badge>
                 <span className="mt-3 block font-black">
                   {question.question}
                 </span>
@@ -71,11 +72,11 @@ export function JobAiPanel({ jobId }: { jobId: string }) {
             ))}
           </div>
 
-          <button type="submit" className="button">
+          <Button type="submit">
             Create draft STAR answers
-          </button>
+          </Button>
         </form>
       ) : null}
-    </section>
+    </Panel>
   );
 }
