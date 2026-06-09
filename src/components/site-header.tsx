@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { auth, signIn, signOut } from "@/auth";
+import { isAdminEmail } from "@/lib/admin";
 
 const links = [
   { href: "/profile", label: "Profile" },
@@ -11,6 +12,7 @@ const links = [
 
 export async function SiteHeader() {
   const session = await auth();
+  const isAdmin = isAdminEmail(session?.user?.email);
 
   return (
     <header className="card flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -36,6 +38,14 @@ export async function SiteHeader() {
               {link.label}
             </Link>
           ))}
+          {isAdmin ? (
+            <Link
+              href="/admin/ownership"
+              className="rounded-full border border-ink/10 bg-paper/70 px-4 py-2 text-sm font-bold text-ink/70 transition hover:border-moss/40 hover:text-moss"
+            >
+              Admin
+            </Link>
+          ) : null}
         </nav>
         {session?.user ? (
           <form

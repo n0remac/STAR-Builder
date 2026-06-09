@@ -1,5 +1,6 @@
-import { createJobAction } from "@/app/jobs/actions";
-import { Badge, Button, CardLink, EmptyState, Panel } from "@/components/ui";
+import { createJobAction, deleteJobAction } from "@/app/jobs/actions";
+import { DeleteSubmitButton } from "@/components/delete-submit-button";
+import { Badge, Button, ButtonLink, EmptyState, Panel } from "@/components/ui";
 import { requireCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/db";
 
@@ -132,21 +133,33 @@ export default async function JobsPage() {
               );
 
               return (
-                <CardLink
+                <article
                   key={job.id}
-                  href={`/jobs/${job.id}`}
+                  className="rounded-[1.5rem] border border-ink/10 bg-paper/70 p-5"
                 >
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="font-semibold text-moss">{job.company}</p>
-                      <h3 className="mt-2 text-2xl font-black group-hover:text-moss">
+                      <h3 className="mt-2 text-2xl font-black">
                         {job.title}
                       </h3>
                       <p className="mt-1 text-sm font-semibold text-ink/55">
                         {formatDateRange(job.start, job.end)}
                       </p>
                     </div>
-                    <span className="text-sm font-bold text-moss">Open</span>
+                    <div className="flex flex-wrap gap-2">
+                      <ButtonLink href={`/jobs/${job.id}`} variant="secondary">
+                        Open
+                      </ButtonLink>
+                      <form action={deleteJobAction}>
+                        <input type="hidden" name="jobId" value={job.id} />
+                        <DeleteSubmitButton
+                          confirmationMessage={`Delete ${job.title} at ${job.company}? This will also delete its STAR answers.`}
+                        >
+                          Delete
+                        </DeleteSubmitButton>
+                      </form>
+                    </div>
                   </div>
 
                   <div className="mt-5 flex flex-wrap gap-2">
@@ -166,7 +179,7 @@ export default async function JobsPage() {
                       Updated {formatLatestUpdate(latestUpdate)}
                     </Badge>
                   </div>
-                </CardLink>
+                </article>
               );
             })}
           </div>

@@ -54,6 +54,10 @@ h3 {
   @apply inline-flex items-center justify-center rounded-full border border-ink/15 bg-white/70 px-5 py-3 text-sm font-bold text-ink transition hover:-translate-y-0.5 hover:border-moss/50 hover:text-moss;
 }
 
+.button-danger {
+  @apply inline-flex items-center justify-center rounded-full border border-red-200 bg-red-50 px-5 py-3 text-sm font-bold text-red-700 transition hover:-translate-y-0.5 hover:border-red-300 hover:bg-red-100 disabled:pointer-events-none disabled:opacity-60;
+}
+
 .pill {
   @apply rounded-full border border-ink/10 bg-paper/80 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-ink/60;
 }

@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 
+import { deleteNarrativeAction } from "@/app/narratives/actions";
 import { NarrativeEditor } from "@/app/narratives/_components/narrative-editor";
+import { DeleteSubmitButton } from "@/components/delete-submit-button";
 import { Badge, ButtonLink, CardLink, Panel } from "@/components/ui";
 import { requireCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/db";
@@ -112,6 +114,14 @@ export default async function NarrativeDetailPage({
           >
             Back to narratives
           </ButtonLink>
+          <form action={deleteNarrativeAction} className="mt-3">
+            <input type="hidden" name="id" value={narrative.id} />
+            <DeleteSubmitButton
+              confirmationMessage={`Delete narrative "${narrative.title}"?`}
+            >
+              Delete narrative
+            </DeleteSubmitButton>
+          </form>
         </Panel>
 
         <Panel>

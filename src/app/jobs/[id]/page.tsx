@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 
-import { createJobStarAction } from "@/app/jobs/actions";
+import { createJobStarAction, deleteJobAction } from "@/app/jobs/actions";
 import { JobAiPanel } from "@/app/jobs/_components/job-ai-panel";
+import { DeleteSubmitButton } from "@/components/delete-submit-button";
 import { Badge, Button, CardLink, EmptyState, Panel } from "@/components/ui";
 import { requireCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/db";
@@ -72,19 +73,29 @@ export default async function JobDetailPage({
               {formatDateRange(job.start, job.end)}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge>
-              {job.starResponses.length} STAR answer
-              {job.starResponses.length === 1 ? "" : "s"}
-            </Badge>
-            <Badge>
-              {averageScore === null
-                ? "Unscored"
-                : `Avg score ${averageScore}/10`}
-            </Badge>
-            {staleCount > 0 ? (
-              <Badge>{staleCount} stale</Badge>
-            ) : null}
+          <div className="flex flex-col gap-3 lg:items-end">
+            <div className="flex flex-wrap gap-2 lg:justify-end">
+              <Badge>
+                {job.starResponses.length} STAR answer
+                {job.starResponses.length === 1 ? "" : "s"}
+              </Badge>
+              <Badge>
+                {averageScore === null
+                  ? "Unscored"
+                  : `Avg score ${averageScore}/10`}
+              </Badge>
+              {staleCount > 0 ? (
+                <Badge>{staleCount} stale</Badge>
+              ) : null}
+            </div>
+            <form action={deleteJobAction}>
+              <input type="hidden" name="jobId" value={job.id} />
+              <DeleteSubmitButton
+                confirmationMessage={`Delete ${job.title} at ${job.company}? This will also delete its STAR answers.`}
+              >
+                Delete job
+              </DeleteSubmitButton>
+            </form>
           </div>
         </div>
       </Panel>

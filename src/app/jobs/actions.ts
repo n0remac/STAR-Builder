@@ -87,6 +87,85 @@ export async function createJobAction(formData: FormData) {
   redirect(`/jobs/${job.id}`);
 }
 
+export async function deleteJobAction(formData: FormData) {
+  const jobId = formString(formData, "jobId");
+  const validationError = validateJobId(jobId);
+
+  if (validationError) {
+    throw new Error(validationError);
+  }
+
+  const user = await requireCurrentUserForAction();
+  const job = await prisma.position.findFirst({
+    where: {
+      id: jobId,
+      resume: {
+        userId: user.id
+      }
+    },
+    include: {
+      narratives: {
+        select: {
+          id: true
+        }
+      },
+      resume: {
+        include: {
+          user: {
+            include: {
+              profile: true
+            }
+          }
+        }
+      },
+      starResponses: {
+        include: {
+          narrativeSources: {
+            select: {
+              narrativeId: true
+            }
+          }
+        }
+      }
+    }
+  });
+
+  if (!job) {
+    throw new Error("Job not found.");
+  }
+
+  const narrativeIds = new Set([
+    ...job.narratives.map((narrative) => narrative.id),
+    ...job.starResponses.flatMap((answer) =>
+      answer.narrativeSources.map((source) => source.narrativeId)
+    )
+  ]);
+  const publicSlug = job.resume.user.profile?.publicSlug;
+
+  await prisma.position.delete({
+    where: {
+      id: job.id
+    }
+  });
+
+  revalidatePath("/jobs");
+  revalidatePath(`/jobs/${job.id}`);
+  revalidatePath("/narratives");
+  revalidatePath("/profile");
+  revalidatePath("/profile/publish");
+  revalidatePath("/resume");
+
+  for (const narrativeId of narrativeIds) {
+    revalidatePath(`/narratives/${narrativeId}`);
+  }
+
+  if (publicSlug) {
+    revalidatePath(`/u/${publicSlug}`);
+  }
+
+  redirect("/jobs");
+}
+
 export async function createJobStarAction(formData: FormData) {
   const jobId = formString(formData, "jobId");
   const title = formString(formData, "title");

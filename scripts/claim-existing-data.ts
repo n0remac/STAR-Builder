@@ -39,7 +39,7 @@ async function main() {
 
   if (sourceUser.profile && targetUser.profile) {
     throw new Error(
-      "Both source and target users already have profiles. Move or delete one profile manually before claiming data."
+      "Both source and target users already have profiles. Run `pnpm tsx scripts/profile-admin.ts list`, then delete the disposable target profile with `pnpm tsx scripts/profile-admin.ts delete-profile <email|profile-id|public-slug>` before claiming data."
     );
   }
 

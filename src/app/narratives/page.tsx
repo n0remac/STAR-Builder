@@ -1,5 +1,7 @@
+import { deleteNarrativeAction } from "@/app/narratives/actions";
 import { NarrativeGenerationPanel } from "@/app/narratives/_components/narrative-generation-panel";
-import { Badge, CardLink, EmptyState, Panel } from "@/components/ui";
+import { DeleteSubmitButton } from "@/components/delete-submit-button";
+import { Badge, ButtonLink, EmptyState, Panel } from "@/components/ui";
 import { requireCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/db";
 import {
@@ -130,9 +132,9 @@ export default async function NarrativesPage() {
                     </EmptyState>
                   ) : (
                     section.narratives.map((narrative) => (
-                      <CardLink
+                      <article
                         key={narrative.id}
-                        href={`/narratives/${narrative.id}`}
+                        className="rounded-[1.5rem] border border-ink/10 bg-paper/70 p-5"
                       >
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                           <div>
@@ -147,7 +149,7 @@ export default async function NarrativesPage() {
                                 {getNarrativeScoreLabel(narrative)}
                               </Badge>
                             </div>
-                            <h4 className="mt-3 text-2xl font-black group-hover:text-moss">
+                            <h4 className="mt-3 text-2xl font-black">
                               {narrative.title}
                             </h4>
                             {narrative.position ? (
@@ -166,8 +168,25 @@ export default async function NarrativesPage() {
                               {narrative.positioning}
                             </p>
                           </div>
-                          <div className="text-sm font-bold text-moss">
-                            Edit
+                          <div className="flex flex-wrap gap-2">
+                            <ButtonLink
+                              href={`/narratives/${narrative.id}`}
+                              variant="secondary"
+                            >
+                              Edit
+                            </ButtonLink>
+                            <form action={deleteNarrativeAction}>
+                              <input
+                                type="hidden"
+                                name="id"
+                                value={narrative.id}
+                              />
+                              <DeleteSubmitButton
+                                confirmationMessage={`Delete narrative "${narrative.title}"?`}
+                              >
+                                Delete
+                              </DeleteSubmitButton>
+                            </form>
                           </div>
                         </div>
                         <div className="mt-4 flex flex-wrap gap-2">
@@ -179,7 +198,7 @@ export default async function NarrativesPage() {
                             Updated {formatDate(narrative.updatedAt)}
                           </Badge>
                         </div>
-                      </CardLink>
+                      </article>
                     ))
                   )}
                 </div>

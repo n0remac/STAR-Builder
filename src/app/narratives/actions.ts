@@ -595,6 +595,52 @@ export async function updateNarrativeAction(formData: FormData) {
   redirect(`/narratives/${id}`);
 }
 
+export async function deleteNarrativeAction(formData: FormData) {
+  const id = formString(formData, "id");
+  const idError = validateNarrativeId(id);
+
+  if (idError) {
+    throw new Error(idError);
+  }
+
+  const user = await requireCurrentUserForAction();
+  const narrative = await prisma.narrative.findFirst({
+    where: {
+      id,
+      userId: user.id
+    },
+    include: {
+      user: {
+        include: {
+          profile: true
+        }
+      }
+    }
+  });
+
+  if (!narrative) {
+    throw new Error("Narrative not found.");
+  }
+
+  await prisma.narrative.delete({
+    where: {
+      id: narrative.id
+    }
+  });
+
+  revalidatePath("/narratives");
+  revalidatePath(`/narratives/${narrative.id}`);
+  revalidatePath("/profile");
+  revalidatePath("/profile/publish");
+
+  if (narrative.user.profile?.publicSlug) {
+    revalidatePath(`/u/${narrative.user.profile.publicSlug}`);
+    revalidatePath(`/u/${narrative.user.profile.publicSlug}/narratives/${narrative.id}`);
+  }
+
+  redirect("/narratives");
+}
+
 export async function regenerateNarrativeScoreAction(formData: FormData) {
   const id = formString(formData, "id");
   const draft = draftFromFormData(formData);
