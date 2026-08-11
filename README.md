@@ -52,8 +52,15 @@ pnpm tsx scripts/profile-admin.ts delete-profile your-google-email@example.com
 pnpm lint
 pnpm typecheck
 pnpm test
+pnpm test:unit
+pnpm test:integration
 pnpm prisma:studio
 ```
+
+Integration tests run the user-owned Server Actions against an isolated,
+migrated SQLite database under the system temporary directory. Authentication,
+redirects, and cache revalidation are mocked; Prisma queries and relations are
+real.
 
 ## Routes
 
